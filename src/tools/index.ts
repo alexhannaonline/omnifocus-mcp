@@ -58,6 +58,12 @@ import { AddNotificationTool } from './notifications/AddNotificationTool.js';
 import { RemoveNotificationTool } from './notifications/RemoveNotificationTool.js';
 import { ClearNotificationsTool } from './notifications/ClearNotificationsTool.js';
 
+// Import attachment tools
+import { ListAttachmentsTool } from './attachments/ListAttachmentsTool.js';
+import { AddLinkedFileTool } from './attachments/AddLinkedFileTool.js';
+import { RemoveAttachmentTool } from './attachments/RemoveAttachmentTool.js';
+import { RemoveLinkedFileTool } from './attachments/RemoveLinkedFileTool.js';
+
 const logger = createLogger('tools');
 
 export async function registerTools(server: Server, cache: CacheManager): Promise<void> {
@@ -119,6 +125,12 @@ export async function registerTools(server: Server, cache: CacheManager): Promis
     new AddNotificationTool(cache),
     new RemoveNotificationTool(cache),
     new ClearNotificationsTool(cache),
+
+    // Attachment tools
+    new ListAttachmentsTool(cache),
+    new AddLinkedFileTool(cache),
+    new RemoveAttachmentTool(cache),
+    new RemoveLinkedFileTool(cache),
   ];
   
   // Register handlers
