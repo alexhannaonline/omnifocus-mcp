@@ -44,6 +44,14 @@ import { MoveTaskTool } from './hierarchy/MoveTaskTool.js';
 import { SetTaskOrderingTool } from './hierarchy/SetTaskOrderingTool.js';
 import { ListSubtasksTool } from './hierarchy/ListSubtasksTool.js';
 
+// Import folder tools
+import { ListFoldersTool } from './folders/ListFoldersTool.js';
+import { CreateFolderTool } from './folders/CreateFolderTool.js';
+import { UpdateFolderTool } from './folders/UpdateFolderTool.js';
+import { DeleteFolderTool } from './folders/DeleteFolderTool.js';
+import { GetFolderContentsTool } from './folders/GetFolderContentsTool.js';
+import { MoveToFolderTool } from './folders/MoveToFolderTool.js';
+
 const logger = createLogger('tools');
 
 export async function registerTools(server: Server, cache: CacheManager): Promise<void> {
@@ -91,6 +99,14 @@ export async function registerTools(server: Server, cache: CacheManager): Promis
     new MoveTaskTool(cache),
     new SetTaskOrderingTool(cache),
     new ListSubtasksTool(cache),
+
+    // Folder tools
+    new ListFoldersTool(cache),
+    new CreateFolderTool(cache),
+    new UpdateFolderTool(cache),
+    new DeleteFolderTool(cache),
+    new GetFolderContentsTool(cache),
+    new MoveToFolderTool(cache),
   ];
   
   // Register handlers
