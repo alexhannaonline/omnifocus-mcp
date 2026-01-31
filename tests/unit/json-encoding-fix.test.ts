@@ -35,11 +35,12 @@ describe('JSON Encoding Fix', () => {
 
   describe('UpdateTaskTool', () => {
     it('should parse JSON string results before returning', async () => {
-      const tool = new UpdateTaskTool(mockCacheManager as any, mockOmniAutomation as any);
+      const tool = new UpdateTaskTool(mockCacheManager as any);
+      (tool as any).omniAutomation = mockOmniAutomation;
       // @ts-ignore - accessing private property for test
       tool.logger = mockLogger;
       
-      // Mock execute to return a JSON string (simulating JXA script output)
+      // Mock execute to return a JSON string (simulating Omni Automation script output)
       mockOmniAutomation.execute.mockResolvedValue(
         JSON.stringify({ id: 'task123', name: 'Updated Task', updated: true })
       );
@@ -61,10 +62,11 @@ describe('JSON Encoding Fix', () => {
     });
 
     it('should handle already-parsed results gracefully', async () => {
-      const tool = new UpdateTaskTool(mockCacheManager as any, mockOmniAutomation as any);
+      const tool = new UpdateTaskTool(mockCacheManager as any);
+      (tool as any).omniAutomation = mockOmniAutomation;
       // @ts-ignore
       tool.logger = mockLogger;
-      
+
       // Mock execute to return an already-parsed object
       mockOmniAutomation.execute.mockResolvedValue({
         id: 'task123',
@@ -86,10 +88,11 @@ describe('JSON Encoding Fix', () => {
     });
 
     it('should handle JSON parse errors gracefully', async () => {
-      const tool = new UpdateTaskTool(mockCacheManager as any, mockOmniAutomation as any);
+      const tool = new UpdateTaskTool(mockCacheManager as any);
+      (tool as any).omniAutomation = mockOmniAutomation;
       // @ts-ignore
       tool.logger = mockLogger;
-      
+
       // Mock execute to return invalid JSON
       mockOmniAutomation.execute.mockResolvedValue('Invalid JSON {');
 
@@ -105,7 +108,8 @@ describe('JSON Encoding Fix', () => {
 
   describe('CreateTaskTool', () => {
     it('should parse JSON string results before returning', async () => {
-      const tool = new CreateTaskTool(mockCacheManager as any, mockOmniAutomation as any);
+      const tool = new CreateTaskTool(mockCacheManager as any);
+      (tool as any).omniAutomation = mockOmniAutomation;
       // @ts-ignore
       tool.logger = mockLogger;
       
@@ -130,7 +134,8 @@ describe('JSON Encoding Fix', () => {
 
   describe('CompleteTaskTool', () => {
     it('should parse JSON string results before returning', async () => {
-      const tool = new CompleteTaskTool(mockCacheManager as any, mockOmniAutomation as any);
+      const tool = new CompleteTaskTool(mockCacheManager as any);
+      (tool as any).omniAutomation = mockOmniAutomation;
       // @ts-ignore
       tool.logger = mockLogger;
       
@@ -153,7 +158,8 @@ describe('JSON Encoding Fix', () => {
 
   describe('DeleteTaskTool', () => {
     it('should parse JSON string results before returning', async () => {
-      const tool = new DeleteTaskTool(mockCacheManager as any, mockOmniAutomation as any);
+      const tool = new DeleteTaskTool(mockCacheManager as any);
+      (tool as any).omniAutomation = mockOmniAutomation;
       // @ts-ignore
       tool.logger = mockLogger;
       

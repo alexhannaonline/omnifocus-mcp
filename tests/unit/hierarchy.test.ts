@@ -18,26 +18,26 @@ describe('Hierarchy Scripts', () => {
     expect(LIST_SUBTASKS_SCRIPT.match(returnPattern)).not.toBeNull();
   });
 
-  it('should use correct method calls with parentheses', () => {
-    // Verify method calls use parentheses
-    expect(GET_TASK_HIERARCHY_SCRIPT).toContain('task.id()');
-    expect(GET_TASK_HIERARCHY_SCRIPT).toContain('task.name()');
-    expect(GET_TASK_HIERARCHY_SCRIPT).toContain('task.completed()');
-    expect(GET_TASK_HIERARCHY_SCRIPT).toContain('task.tasks()');
+  it('should use correct Omni Automation property access', () => {
+    // Verify property access without parentheses (Omni Automation style)
+    expect(GET_TASK_HIERARCHY_SCRIPT).toContain('id.primaryKey');
+    expect(GET_TASK_HIERARCHY_SCRIPT).toContain('t.name');
+    expect(GET_TASK_HIERARCHY_SCRIPT).toContain('t.completed');
+    expect(GET_TASK_HIERARCHY_SCRIPT).toContain('t.children');
 
-    expect(LIST_SUBTASKS_SCRIPT).toContain('task.id()');
-    expect(LIST_SUBTASKS_SCRIPT).toContain('task.tasks()');
-    expect(LIST_SUBTASKS_SCRIPT).toContain('task.hasChildren()');
+    expect(LIST_SUBTASKS_SCRIPT).toContain('id.primaryKey');
+    expect(LIST_SUBTASKS_SCRIPT).toContain('task.children');
+    expect(LIST_SUBTASKS_SCRIPT).toContain('child.hasChildren');
   });
 
   it('should use correct position syntax for subtask creation', () => {
-    // Verify position handling
-    expect(CREATE_SUBTASK_SCRIPT).toContain('parentTask.tasks.beginning');
-    expect(CREATE_SUBTASK_SCRIPT).toContain('parentTask.tasks.ending');
+    // Verify position handling (Omni Automation uses parentTask.beginning/ending)
+    expect(CREATE_SUBTASK_SCRIPT).toContain('parentTask.beginning');
+    expect(CREATE_SUBTASK_SCRIPT).toContain('parentTask.ending');
   });
 
   it('should use moveTasks for task movement', () => {
-    expect(MOVE_TASK_SCRIPT).toContain('doc.moveTasks([task], destination)');
+    expect(MOVE_TASK_SCRIPT).toContain('moveTasks([task], destination)');
   });
 
   it('should handle task ordering properties', () => {
@@ -63,7 +63,7 @@ describe('Hierarchy Scripts', () => {
   });
 
   it('should handle tag assignment in subtask creation', () => {
-    expect(CREATE_SUBTASK_SCRIPT).toContain('addTags(tagsToAdd)');
+    expect(CREATE_SUBTASK_SCRIPT).toContain('addTag(t)');
     expect(CREATE_SUBTASK_SCRIPT).toContain('tagsNotFound');
   });
 });

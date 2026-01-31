@@ -31,21 +31,22 @@ describe('List Projects ID Field', () => {
     mockCacheManager.get.mockReturnValue(null);
     mockOmniAutomation.buildScript.mockReturnValue('mock script');
     
-    listProjectsTool = new ListProjectsTool(mockCacheManager as any, mockOmniAutomation as any);
+    listProjectsTool = new ListProjectsTool(mockCacheManager as any);
+    (listProjectsTool as any).omniAutomation = mockOmniAutomation;
     // @ts-ignore
     listProjectsTool.logger = mockLogger;
   });
 
   describe('Script validation', () => {
-    it('should use project.id() instead of project.id.primaryKey', () => {
-      // The script should use the correct JXA API
-      expect(LIST_PROJECTS_SCRIPT).toContain('id: project.id()');
-      expect(LIST_PROJECTS_SCRIPT).not.toContain('id: project.id.primaryKey');
+    it('should use project.id.primaryKey for Omni Automation', () => {
+      // The script should use the correct Omni Automation API
+      expect(LIST_PROJECTS_SCRIPT).toContain('id: project.id.primaryKey');
+      expect(LIST_PROJECTS_SCRIPT).not.toContain('id: project.id()');
     });
 
     it('should return id field in project object', () => {
       // Verify the structure includes id
-      const projectObjPattern = /const projectObj = \{[\s\S]*?id: project\.id\(\)/;
+      const projectObjPattern = /const projectObj = \{[\s\S]*?id: project\.id\.primaryKey/;
       expect(LIST_PROJECTS_SCRIPT).toMatch(projectObjPattern);
     });
   });

@@ -20,21 +20,21 @@ describe('Folder Scripts', () => {
     expect(MOVE_TO_FOLDER_SCRIPT.match(returnPattern)).not.toBeNull();
   });
 
-  it('should use correct method calls with parentheses', () => {
-    expect(LIST_FOLDERS_SCRIPT).toContain('folder.id()');
-    expect(LIST_FOLDERS_SCRIPT).toContain('folder.name()');
-    expect(LIST_FOLDERS_SCRIPT).toContain('folder.status.name()');
-    expect(LIST_FOLDERS_SCRIPT).toContain('folder.folders()');
-    expect(LIST_FOLDERS_SCRIPT).toContain('folder.projects()');
+  it('should use correct Omni Automation property access', () => {
+    expect(LIST_FOLDERS_SCRIPT).toContain('folder.id.primaryKey');
+    expect(LIST_FOLDERS_SCRIPT).toContain('folder.name');
+    expect(LIST_FOLDERS_SCRIPT).toContain('getFolderStatus(folder.status)');
+    expect(LIST_FOLDERS_SCRIPT).toContain('folder.folders');
+    expect(LIST_FOLDERS_SCRIPT).toContain('folder.projects');
 
-    expect(GET_FOLDER_CONTENTS_SCRIPT).toContain('folder.folders()');
-    expect(GET_FOLDER_CONTENTS_SCRIPT).toContain('folder.projects()');
+    expect(GET_FOLDER_CONTENTS_SCRIPT).toContain('folder.folders');
+    expect(GET_FOLDER_CONTENTS_SCRIPT).toContain('folder.projects');
   });
 
   it('should use correct folder creation patterns', () => {
-    expect(CREATE_FOLDER_SCRIPT).toContain('app.Folder(folderName, position)');
-    expect(CREATE_FOLDER_SCRIPT).toContain('doc.folders.ending');
-    expect(CREATE_FOLDER_SCRIPT).toContain('parentFolder.folders.ending');
+    expect(CREATE_FOLDER_SCRIPT).toContain('new Folder(folderName, position)');
+    expect(CREATE_FOLDER_SCRIPT).toContain('folders.ending');
+    expect(CREATE_FOLDER_SCRIPT).toContain('parentFolder.ending');
   });
 
   it('should handle folder status updates', () => {
@@ -43,8 +43,8 @@ describe('Folder Scripts', () => {
   });
 
   it('should use moveSections for moving items', () => {
-    expect(DELETE_FOLDER_SCRIPT).toContain('doc.moveSections');
-    expect(MOVE_TO_FOLDER_SCRIPT).toContain('doc.moveSections');
+    expect(DELETE_FOLDER_SCRIPT).toContain('moveSections');
+    expect(MOVE_TO_FOLDER_SCRIPT).toContain('moveSections');
   });
 
   it('should include placeholders for parameters', () => {

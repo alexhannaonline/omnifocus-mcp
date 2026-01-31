@@ -1,4 +1,11 @@
 export const LIST_FOLDERS_SCRIPT = `
+
+  function getFolderStatus(s) {
+    if (s === Folder.Status.Active) return "active";
+    if (s === Folder.Status.Dropped) return "dropped";
+    return "unknown";
+  }
+
   const maxDepth = {{maxDepth}};
   const statusFilter = {{statusFilter}};
 
@@ -6,14 +13,14 @@ export const LIST_FOLDERS_SCRIPT = `
     // Recursively build folder tree
     function buildFolderNode(folder, currentDepth) {
       const node = {
-        id: folder.id(),
-        name: folder.name(),
-        status: folder.status.name()
+        id: folder.id.primaryKey,
+        name: folder.name,
+        status: getFolderStatus(folder.status)
       };
 
       // Count projects in folder
       try {
-        const projects = folder.projects();
+        const projects = folder.projects;
         node.projectCount = projects.length;
       } catch (e) {
         node.projectCount = 0;
@@ -22,12 +29,12 @@ export const LIST_FOLDERS_SCRIPT = `
       // Add children if within depth limit
       if (maxDepth === null || currentDepth < maxDepth) {
         try {
-          const childFolders = folder.folders();
+          const childFolders = folder.folders;
           if (childFolders && childFolders.length > 0) {
             node.children = [];
             for (let i = 0; i < childFolders.length; i++) {
               // Apply status filter
-              const childStatus = childFolders[i].status.name();
+              const childStatus = getFolderStatus(childFolders[i].status);
               if (statusFilter === null || statusFilter === childStatus) {
                 node.children.push(buildFolderNode(childFolders[i], currentDepth + 1));
               }
@@ -40,19 +47,19 @@ export const LIST_FOLDERS_SCRIPT = `
     }
 
     // Get all top-level folders
-    const allFolders = doc.folders();
-    const folders = [];
+    const allFolders = folders;
+    const result = [];
 
     for (let i = 0; i < allFolders.length; i++) {
-      const folderStatus = allFolders[i].status.name();
+      const folderStatus = getFolderStatus(allFolders[i].status);
       if (statusFilter === null || statusFilter === folderStatus) {
-        folders.push(buildFolderNode(allFolders[i], 0));
+        result.push(buildFolderNode(allFolders[i], 0));
       }
     }
 
     return JSON.stringify({
-      folders: folders,
-      count: folders.length
+      folders: result,
+      count: result.length
     });
   } catch (error) {
     return JSON.stringify({
@@ -64,6 +71,7 @@ export const LIST_FOLDERS_SCRIPT = `
 `;
 
 export const CREATE_FOLDER_SCRIPT = `
+
   const folderName = {{folderName}};
   const parentFolderId = {{parentFolderId}};
 
@@ -72,10 +80,10 @@ export const CREATE_FOLDER_SCRIPT = `
 
     if (parentFolderId !== null) {
       // Find parent folder
-      const allFolders = doc.flattenedFolders();
+      const allFolders = flattenedFolders;
       let parentFolder = null;
       for (let i = 0; i < allFolders.length; i++) {
-        if (allFolders[i].id() === parentFolderId) {
+        if (allFolders[i].id.primaryKey === parentFolderId) {
           parentFolder = allFolders[i];
           break;
         }
@@ -83,42 +91,19 @@ export const CREATE_FOLDER_SCRIPT = `
       if (!parentFolder) {
         return JSON.stringify({ error: true, message: 'Parent folder not found' });
       }
-      position = parentFolder.folders.ending;
+      position = parentFolder.ending;
     } else {
       // Create at root level
-      position = doc.folders.ending;
+      position = folders.ending;
     }
 
     // Create the folder
-    const newFolder = app.Folder(folderName, position);
-    position.push(newFolder);
+    const newFolder = new Folder(folderName, position);
 
-    // Try to find the created folder and get its ID
+    // Get the created folder's ID
     let folderId = null;
     try {
-      if (parentFolderId !== null) {
-        const allFolders = doc.flattenedFolders();
-        for (let i = 0; i < allFolders.length; i++) {
-          if (allFolders[i].id() === parentFolderId) {
-            const childFolders = allFolders[i].folders();
-            for (let j = childFolders.length - 1; j >= 0; j--) {
-              if (childFolders[j].name() === folderName) {
-                folderId = childFolders[j].id();
-                break;
-              }
-            }
-            break;
-          }
-        }
-      } else {
-        const topLevelFolders = doc.folders();
-        for (let i = topLevelFolders.length - 1; i >= 0; i--) {
-          if (topLevelFolders[i].name() === folderName) {
-            folderId = topLevelFolders[i].id();
-            break;
-          }
-        }
-      }
+      folderId = newFolder.id.primaryKey;
     } catch (e) {
       folderId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
     }
@@ -139,15 +124,22 @@ export const CREATE_FOLDER_SCRIPT = `
 `;
 
 export const UPDATE_FOLDER_SCRIPT = `
+
+  function getFolderStatus(s) {
+    if (s === Folder.Status.Active) return "active";
+    if (s === Folder.Status.Dropped) return "dropped";
+    return "unknown";
+  }
+
   const folderId = {{folderId}};
   const updates = {{updates}};
 
   try {
     // Find folder by ID
-    const allFolders = doc.flattenedFolders();
+    const allFolders = flattenedFolders;
     let folder = null;
     for (let i = 0; i < allFolders.length; i++) {
-      if (allFolders[i].id() === folderId) {
+      if (allFolders[i].id.primaryKey === folderId) {
         folder = allFolders[i];
         break;
       }
@@ -171,8 +163,8 @@ export const UPDATE_FOLDER_SCRIPT = `
     return JSON.stringify({
       success: true,
       folderId: folderId,
-      name: folder.name(),
-      status: folder.status.name()
+      name: folder.name,
+      status: getFolderStatus(folder.status)
     });
   } catch (error) {
     return JSON.stringify({
@@ -184,15 +176,16 @@ export const UPDATE_FOLDER_SCRIPT = `
 `;
 
 export const DELETE_FOLDER_SCRIPT = `
+
   const folderId = {{folderId}};
   const moveContentsTo = {{moveContentsTo}};
 
   try {
     // Find folder by ID
-    const allFolders = doc.flattenedFolders();
+    const allFolders = flattenedFolders;
     let folder = null;
     for (let i = 0; i < allFolders.length; i++) {
-      if (allFolders[i].id() === folderId) {
+      if (allFolders[i].id.primaryKey === folderId) {
         folder = allFolders[i];
         break;
       }
@@ -205,7 +198,7 @@ export const DELETE_FOLDER_SCRIPT = `
     if (moveContentsTo !== null) {
       let targetFolder = null;
       for (let i = 0; i < allFolders.length; i++) {
-        if (allFolders[i].id() === moveContentsTo) {
+        if (allFolders[i].id.primaryKey === moveContentsTo) {
           targetFolder = allFolders[i];
           break;
         }
@@ -216,25 +209,25 @@ export const DELETE_FOLDER_SCRIPT = `
 
       // Move child folders
       try {
-        const childFolders = folder.folders();
+        const childFolders = folder.folders;
         if (childFolders.length > 0) {
           const foldersArray = [];
           for (let i = 0; i < childFolders.length; i++) {
             foldersArray.push(childFolders[i]);
           }
-          doc.moveSections(foldersArray, targetFolder.folders.ending);
+          moveSections(foldersArray, targetFolder.ending);
         }
       } catch (e) {}
 
       // Move projects
       try {
-        const projects = folder.projects();
-        if (projects.length > 0) {
+        const childProjects = folder.projects;
+        if (childProjects.length > 0) {
           const projectsArray = [];
-          for (let i = 0; i < projects.length; i++) {
-            projectsArray.push(projects[i]);
+          for (let i = 0; i < childProjects.length; i++) {
+            projectsArray.push(childProjects[i]);
           }
-          doc.moveSections(projectsArray, targetFolder.projects.ending);
+          moveSections(projectsArray, targetFolder.ending);
         }
       } catch (e) {}
     }
@@ -257,14 +250,29 @@ export const DELETE_FOLDER_SCRIPT = `
 `;
 
 export const GET_FOLDER_CONTENTS_SCRIPT = `
+
+  function getProjectStatus(s) {
+    if (s === Project.Status.Active) return "active";
+    if (s === Project.Status.OnHold) return "onHold";
+    if (s === Project.Status.Done) return "done";
+    if (s === Project.Status.Dropped) return "dropped";
+    return "unknown";
+  }
+
+  function getFolderStatus(s) {
+    if (s === Folder.Status.Active) return "active";
+    if (s === Folder.Status.Dropped) return "dropped";
+    return "unknown";
+  }
+
   const folderId = {{folderId}};
 
   try {
     // Find folder by ID
-    const allFolders = doc.flattenedFolders();
+    const allFolders = flattenedFolders;
     let folder = null;
     for (let i = 0; i < allFolders.length; i++) {
-      if (allFolders[i].id() === folderId) {
+      if (allFolders[i].id.primaryKey === folderId) {
         folder = allFolders[i];
         break;
       }
@@ -276,12 +284,12 @@ export const GET_FOLDER_CONTENTS_SCRIPT = `
     // Get child folders
     const folders = [];
     try {
-      const childFolders = folder.folders();
+      const childFolders = folder.folders;
       for (let i = 0; i < childFolders.length; i++) {
         folders.push({
-          id: childFolders[i].id(),
-          name: childFolders[i].name(),
-          status: childFolders[i].status.name()
+          id: childFolders[i].id.primaryKey,
+          name: childFolders[i].name,
+          status: getFolderStatus(childFolders[i].status)
         });
       }
     } catch (e) {}
@@ -289,19 +297,19 @@ export const GET_FOLDER_CONTENTS_SCRIPT = `
     // Get projects
     const projects = [];
     try {
-      const folderProjects = folder.projects();
+      const folderProjects = folder.projects;
       for (let i = 0; i < folderProjects.length; i++) {
         projects.push({
-          id: folderProjects[i].id(),
-          name: folderProjects[i].name(),
-          status: folderProjects[i].status.name()
+          id: folderProjects[i].id.primaryKey,
+          name: folderProjects[i].name,
+          status: getProjectStatus(folderProjects[i].status)
         });
       }
     } catch (e) {}
 
     return JSON.stringify({
       folderId: folderId,
-      folderName: folder.name(),
+      folderName: folder.name,
       folders: folders,
       projects: projects
     });
@@ -315,16 +323,17 @@ export const GET_FOLDER_CONTENTS_SCRIPT = `
 `;
 
 export const MOVE_TO_FOLDER_SCRIPT = `
+
   const itemId = {{itemId}};
   const itemType = {{itemType}};
   const targetFolderId = {{targetFolderId}};
 
   try {
     // Find target folder
-    const allFolders = doc.flattenedFolders();
+    const allFolders = flattenedFolders;
     let targetFolder = null;
     for (let i = 0; i < allFolders.length; i++) {
-      if (allFolders[i].id() === targetFolderId) {
+      if (allFolders[i].id.primaryKey === targetFolderId) {
         targetFolder = allFolders[i];
         break;
       }
@@ -337,7 +346,7 @@ export const MOVE_TO_FOLDER_SCRIPT = `
       // Find folder to move
       let folder = null;
       for (let i = 0; i < allFolders.length; i++) {
-        if (allFolders[i].id() === itemId) {
+        if (allFolders[i].id.primaryKey === itemId) {
           folder = allFolders[i];
           break;
         }
@@ -347,7 +356,7 @@ export const MOVE_TO_FOLDER_SCRIPT = `
       }
 
       // Move folder
-      doc.moveSections([folder], targetFolder.folders.ending);
+      moveSections([folder], targetFolder.ending);
 
       return JSON.stringify({
         success: true,
@@ -358,10 +367,10 @@ export const MOVE_TO_FOLDER_SCRIPT = `
 
     } else if (itemType === 'project') {
       // Find project to move
-      const allProjects = doc.flattenedProjects();
+      const allProjects = flattenedProjects;
       let project = null;
       for (let i = 0; i < allProjects.length; i++) {
-        if (allProjects[i].id() === itemId) {
+        if (allProjects[i].id.primaryKey === itemId) {
           project = allProjects[i];
           break;
         }
@@ -371,7 +380,7 @@ export const MOVE_TO_FOLDER_SCRIPT = `
       }
 
       // Move project
-      doc.moveSections([project], targetFolder.projects.ending);
+      moveSections([project], targetFolder.ending);
 
       return JSON.stringify({
         success: true,

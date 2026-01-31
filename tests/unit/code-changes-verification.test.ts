@@ -7,7 +7,7 @@ describe('Code Changes Verification', () => {
     it('UPDATE_TASK_SCRIPT_SIMPLE should search all tasks, not just first 100', () => {
       // The loop should iterate through all tasks
       expect(UPDATE_TASK_SCRIPT_SIMPLE).toContain('for (let i = 0; i < tasks.length; i++)');
-      
+
       // Should NOT have any limit like i < 100
       expect(UPDATE_TASK_SCRIPT_SIMPLE).not.toContain('i < 100');
       expect(UPDATE_TASK_SCRIPT_SIMPLE).not.toContain('Math.min(100');
@@ -19,23 +19,20 @@ describe('Code Changes Verification', () => {
     it('UPDATE_TASK_SCRIPT_SIMPLE should handle projectId updates', () => {
       // Should check for projectId in updates
       expect(UPDATE_TASK_SCRIPT_SIMPLE).toContain('if (updates.projectId !== undefined)');
-      
-      // Should handle null projectId (move to inbox)
-      expect(UPDATE_TASK_SCRIPT_SIMPLE).toContain('if (updates.projectId === null)');
-      expect(UPDATE_TASK_SCRIPT_SIMPLE).toContain('task.assignedContainer = doc.inbox');
-      
+
+      // Should handle empty string projectId (move to inbox)
+      expect(UPDATE_TASK_SCRIPT_SIMPLE).toContain('if (updates.projectId === "")');
+      expect(UPDATE_TASK_SCRIPT_SIMPLE).toContain('task.assignedContainer = null');
+
       // Should handle projectId assignment
       expect(UPDATE_TASK_SCRIPT_SIMPLE).toContain('task.assignedContainer = projects[i]');
     });
   });
 
   describe('Bug Fix: List Projects Returns ID Field', () => {
-    it('LIST_PROJECTS_SCRIPT should use project.id() not project.id.primaryKey', () => {
-      // Should use the correct JXA API
-      expect(LIST_PROJECTS_SCRIPT).toContain('id: project.id()');
-      
-      // Should NOT use the broken pattern
-      expect(LIST_PROJECTS_SCRIPT).not.toContain('id: project.id.primaryKey,');
+    it('LIST_PROJECTS_SCRIPT should use project.id.primaryKey', () => {
+      // Should use the correct Omni Automation API
+      expect(LIST_PROJECTS_SCRIPT).toContain('id: project.id.primaryKey');
     });
   });
 
@@ -44,12 +41,13 @@ describe('Code Changes Verification', () => {
       // Import the tool to check its schema
       const { UpdateTaskTool } = await import('../../src/tools/tasks/UpdateTaskTool');
       const tool = new UpdateTaskTool({} as any, {} as any);
-      
+
       const projectIdDescription = tool.inputSchema.properties.projectId.description;
-      
-      // Should mention both sources
-      expect(projectIdDescription).toContain('list_tasks');
+
+      // Should mention list_projects as a source for projectId
       expect(projectIdDescription).toContain('list_projects');
+      // Should mention empty string for inbox
+      expect(projectIdDescription).toContain('""');
     });
   });
 
@@ -66,10 +64,10 @@ describe('Code Changes Verification', () => {
       for (const toolFile of toolFiles) {
         const module = await import(toolFile);
         const ToolClass = Object.values(module)[0] as any;
-        
+
         // Create instance with mocks
         const tool = new ToolClass({} as any, {} as any);
-        
+
         // The execute method should exist
         expect(tool.execute).toBeDefined();
         expect(typeof tool.execute).toBe('function');

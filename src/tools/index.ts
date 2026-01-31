@@ -74,7 +74,7 @@ export async function registerTools(server: Server, cache: CacheManager): Promis
     new GetTaskCountTool(cache),
     new TodaysAgendaTool(cache),
     
-    // Task tools - Write operations (now enabled with correct JXA syntax)
+    // Task tools - Write operations
     new CreateTaskTool(cache),
     new UpdateTaskTool(cache),
     new CompleteTaskTool(cache),

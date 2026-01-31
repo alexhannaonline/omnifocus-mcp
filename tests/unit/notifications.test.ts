@@ -16,15 +16,15 @@ describe('Notification Scripts', () => {
     expect(CLEAR_NOTIFICATIONS_SCRIPT.match(returnPattern)).not.toBeNull();
   });
 
-  it('should use correct method calls with parentheses', () => {
-    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('task.notifications()');
-    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('notif.kind.name()');
-    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('notif.absoluteFireDate()');
-    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('notif.relativeFireOffset()');
-    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('notif.nextFireDate()');
-    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('notif.isSnoozed()');
+  it('should use correct property access without parentheses', () => {
+    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('task.notifications');
+    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('notif.kind.name');
+    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('notif.absoluteFireDate');
+    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('notif.relativeFireOffset');
+    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('notif.nextFireDate');
+    expect(LIST_NOTIFICATIONS_SCRIPT).toContain('notif.isSnoozed');
 
-    expect(CLEAR_NOTIFICATIONS_SCRIPT).toContain('task.notifications()');
+    expect(CLEAR_NOTIFICATIONS_SCRIPT).toContain('task.notifications');
   });
 
   it('should use addNotification for adding notifications', () => {
@@ -33,7 +33,7 @@ describe('Notification Scripts', () => {
   });
 
   it('should validate relative notifications require due date', () => {
-    expect(ADD_NOTIFICATION_SCRIPT).toContain('task.dueDate()');
+    expect(ADD_NOTIFICATION_SCRIPT).toContain('task.dueDate');
     expect(ADD_NOTIFICATION_SCRIPT).toContain('Cannot add relative notification to task without due date');
   });
 

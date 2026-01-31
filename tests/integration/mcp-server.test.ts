@@ -87,7 +87,7 @@ const serverStartTime = new Promise((resolve, reject) => {
 });
 
 // Test 2: Memory and resource usage
-async function testResourceUsage(): void: Promise<void> {
+async function testResourceUsage(): Promise<void> {
   console.log('\nTest 2: Resource Usage');
   console.log('----------------------');
   
@@ -110,7 +110,7 @@ async function testResourceUsage(): void: Promise<void> {
 }
 
 // Test 3: Tool registration verification
-async function testToolRegistration(): void: Promise<void> {
+async function testToolRegistration(): Promise<void> {
   console.log('\nTest 3: Tool Registration');
   console.log('-------------------------');
   
@@ -179,7 +179,7 @@ async function testToolRegistration(): void: Promise<void> {
 }
 
 // Test 4: Quick tool execution test
-async function testToolExecution(): void: Promise<void> {
+async function testToolExecution(): Promise<void> {
   console.log('\nTest 4: Tool Execution');
   console.log('----------------------');
   

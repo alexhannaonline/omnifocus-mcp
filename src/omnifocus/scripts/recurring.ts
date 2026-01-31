@@ -1,98 +1,119 @@
 export const ANALYZE_RECURRING_TASKS_SCRIPT = `
+
   const options = {{options}};
+
+  function parseRRule(ruleString) {
+    const result = { unit: 'days', steps: 1 };
+    if (!ruleString) return result;
+    const freqMatch = ruleString.match(/FREQ=(\\w+)/);
+    if (freqMatch) {
+      switch(freqMatch[1]) {
+        case 'DAILY': result.unit = 'days'; break;
+        case 'WEEKLY': result.unit = 'weeks'; break;
+        case 'MONTHLY': result.unit = 'months'; break;
+        case 'YEARLY': result.unit = 'years'; break;
+      }
+    }
+    const intervalMatch = ruleString.match(/INTERVAL=(\\d+)/);
+    if (intervalMatch) {
+      result.steps = parseInt(intervalMatch[1]);
+    }
+    return result;
+  }
 
   try {
     const recurringTasks = [];
-    // Use availableTasks() when activeOnly is true for better performance
-    const allTasks = options.activeOnly ? doc.availableTasks() : doc.flattenedTasks();
+    const allTasks = flattenedTasks;
     const now = new Date();
 
     for (let i = 0; i < allTasks.length; i++) {
       const task = allTasks[i];
 
+      // Skip if filtering by active only and task is completed
+      if (options.activeOnly && task.completed) continue;
+
       // Check if task has repetition rule
-      const repetitionRule = task.repetitionRule();
+      const repetitionRule = task.repetitionRule;
       if (!repetitionRule) continue;
 
-      // Skip if filtering by active only and task is completed (safety check, availableTasks should already filter)
-      if (options.activeOnly && task.completed()) continue;
-      
+      const ruleInfo = parseRRule(repetitionRule.ruleString);
+
       const taskInfo = {
-        id: task.id(),
-        name: task.name(),
+        id: task.id.primaryKey,
+        name: task.name,
         repetitionRule: {
-          method: repetitionRule.method,
-          unit: repetitionRule.unit,
-          steps: repetitionRule.steps,
-          fixed: repetitionRule.fixed
+          method: repetitionRule.method ? String(repetitionRule.method) : null,
+          unit: ruleInfo.unit,
+          steps: ruleInfo.steps,
+          ruleString: repetitionRule.ruleString || null
         }
       };
-      
+
       // Add project info
       try {
-        const project = task.containingProject();
+        const project = task.containingProject;
         if (project) {
-          taskInfo.project = project.name();
-          taskInfo.projectId = project.id();
+          taskInfo.project = project.name;
+          taskInfo.projectId = project.id.primaryKey;
         }
       } catch (e) {}
-      
+
       // Add dates
-      const deferDate = task.deferDate();
+      const deferDate = task.deferDate;
       if (deferDate) taskInfo.deferDate = deferDate.toISOString();
-      
-      const dueDate = task.dueDate();
+
+      const dueDate = task.dueDate;
       if (dueDate) taskInfo.dueDate = dueDate.toISOString();
-      
+
       // Calculate next occurrence
-      if (dueDate && !task.completed()) {
+      if (dueDate && !task.completed) {
         taskInfo.nextDue = dueDate.toISOString();
         taskInfo.daysUntilDue = Math.floor((dueDate - now) / (1000 * 60 * 60 * 24));
-        
+
         if (taskInfo.daysUntilDue < 0) {
           taskInfo.isOverdue = true;
           taskInfo.overdueDays = Math.abs(taskInfo.daysUntilDue);
         }
       }
-      
+
       // Add completion history if available
       if (options.includeHistory) {
         try {
-          const completionDate = task.completionDate();
+          const completionDate = task.completionDate;
           if (completionDate) {
             taskInfo.lastCompleted = completionDate.toISOString();
           }
         } catch (e) {}
       }
-      
+
       // Calculate frequency description
       let frequencyDesc = '';
-      switch(repetitionRule.unit) {
+      switch(ruleInfo.unit) {
         case 'days':
-          if (repetitionRule.steps === 1) frequencyDesc = 'Daily';
-          else if (repetitionRule.steps === 7) frequencyDesc = 'Weekly';
-          else if (repetitionRule.steps === 14) frequencyDesc = 'Biweekly';
-          else frequencyDesc = 'Every ' + repetitionRule.steps + ' days';
+          if (ruleInfo.steps === 1) frequencyDesc = 'Daily';
+          else if (ruleInfo.steps === 7) frequencyDesc = 'Weekly';
+          else if (ruleInfo.steps === 14) frequencyDesc = 'Biweekly';
+          else frequencyDesc = 'Every ' + ruleInfo.steps + ' days';
           break;
         case 'weeks':
-          if (repetitionRule.steps === 1) frequencyDesc = 'Weekly';
-          else frequencyDesc = 'Every ' + repetitionRule.steps + ' weeks';
+          if (ruleInfo.steps === 1) frequencyDesc = 'Weekly';
+          else frequencyDesc = 'Every ' + ruleInfo.steps + ' weeks';
           break;
         case 'months':
-          if (repetitionRule.steps === 1) frequencyDesc = 'Monthly';
-          else if (repetitionRule.steps === 3) frequencyDesc = 'Quarterly';
-          else frequencyDesc = 'Every ' + repetitionRule.steps + ' months';
+          if (ruleInfo.steps === 1) frequencyDesc = 'Monthly';
+          else if (ruleInfo.steps === 3) frequencyDesc = 'Quarterly';
+          else frequencyDesc = 'Every ' + ruleInfo.steps + ' months';
           break;
         case 'years':
-          if (repetitionRule.steps === 1) frequencyDesc = 'Yearly';
-          else frequencyDesc = 'Every ' + repetitionRule.steps + ' years';
+          if (ruleInfo.steps === 1) frequencyDesc = 'Yearly';
+          else frequencyDesc = 'Every ' + ruleInfo.steps + ' years';
           break;
       }
       taskInfo.frequency = frequencyDesc;
-      
+
       recurringTasks.push(taskInfo);
     }
-    
+
     // Sort tasks
     switch(options.sortBy) {
       case 'dueDate':
@@ -131,7 +152,7 @@ export const ANALYZE_RECURRING_TASKS_SCRIPT = `
         recurringTasks.sort((a, b) => a.name.localeCompare(b.name));
         break;
     }
-    
+
     // Calculate summary statistics
     const summary = {
       totalRecurring: recurringTasks.length,
@@ -139,7 +160,7 @@ export const ANALYZE_RECURRING_TASKS_SCRIPT = `
       dueThisWeek: recurringTasks.filter(t => t.daysUntilDue >= 0 && t.daysUntilDue <= 7).length,
       byFrequency: {}
     };
-    
+
     // Count by frequency
     recurringTasks.forEach(task => {
       if (!summary.byFrequency[task.frequency]) {
@@ -147,7 +168,7 @@ export const ANALYZE_RECURRING_TASKS_SCRIPT = `
       }
       summary.byFrequency[task.frequency]++;
     });
-    
+
     return JSON.stringify({
       tasks: recurringTasks,
       summary: summary
@@ -161,40 +182,63 @@ export const ANALYZE_RECURRING_TASKS_SCRIPT = `
 `;
 
 export const GET_RECURRING_PATTERNS_SCRIPT = `
+
+
+  function parseRRule(ruleString) {
+    const result = { unit: 'days', steps: 1 };
+    if (!ruleString) return result;
+    const freqMatch = ruleString.match(/FREQ=(\\w+)/);
+    if (freqMatch) {
+      switch(freqMatch[1]) {
+        case 'DAILY': result.unit = 'days'; break;
+        case 'WEEKLY': result.unit = 'weeks'; break;
+        case 'MONTHLY': result.unit = 'months'; break;
+        case 'YEARLY': result.unit = 'years'; break;
+      }
+    }
+    const intervalMatch = ruleString.match(/INTERVAL=(\\d+)/);
+    if (intervalMatch) {
+      result.steps = parseInt(intervalMatch[1]);
+    }
+    return result;
+  }
+
   try {
     const patterns = {};
     const projectPatterns = {};
-    const allTasks = doc.flattenedTasks();
+    const allTasks = flattenedTasks;
     let totalRecurring = 0;
-    
+
     for (let i = 0; i < allTasks.length; i++) {
       const task = allTasks[i];
-      const repetitionRule = task.repetitionRule();
+      const repetitionRule = task.repetitionRule;
       if (!repetitionRule) continue;
-      
+
       totalRecurring++;
-      
+
+      const ruleInfo = parseRRule(repetitionRule.ruleString);
+
       // Create pattern key
-      const patternKey = repetitionRule.unit + '_' + repetitionRule.steps;
+      const patternKey = ruleInfo.unit + '_' + ruleInfo.steps;
       if (!patterns[patternKey]) {
         patterns[patternKey] = {
-          unit: repetitionRule.unit,
-          steps: repetitionRule.steps,
+          unit: ruleInfo.unit,
+          steps: ruleInfo.steps,
           count: 0,
           tasks: []
         };
       }
-      
+
       patterns[patternKey].count++;
       if (patterns[patternKey].tasks.length < 5) { // Limit examples
-        patterns[patternKey].tasks.push(task.name());
+        patterns[patternKey].tasks.push(task.name);
       }
-      
+
       // Track by project
       try {
-        const project = task.containingProject();
+        const project = task.containingProject;
         if (project) {
-          const projectName = project.name();
+          const projectName = project.name;
           if (!projectPatterns[projectName]) {
             projectPatterns[projectName] = {
               total: 0,
@@ -209,7 +253,7 @@ export const GET_RECURRING_PATTERNS_SCRIPT = `
         }
       } catch (e) {}
     }
-    
+
     // Convert patterns to array and sort by count
     const patternArray = Object.entries(patterns).map(([key, data]) => ({
       pattern: key,
@@ -219,9 +263,9 @@ export const GET_RECURRING_PATTERNS_SCRIPT = `
       percentage: Math.round((data.count / totalRecurring) * 100),
       examples: data.tasks
     }));
-    
+
     patternArray.sort((a, b) => b.count - a.count);
-    
+
     // Convert project patterns to array
     const projectArray = Object.entries(projectPatterns)
       .map(([name, data]) => ({
@@ -233,7 +277,7 @@ export const GET_RECURRING_PATTERNS_SCRIPT = `
         }))
       }))
       .sort((a, b) => b.recurringCount - a.recurringCount);
-    
+
     return JSON.stringify({
       totalRecurring: totalRecurring,
       patterns: patternArray,

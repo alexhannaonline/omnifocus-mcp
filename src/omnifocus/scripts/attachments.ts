@@ -1,12 +1,13 @@
 export const LIST_ATTACHMENTS_SCRIPT = `
+
   const taskId = {{taskId}};
 
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -18,7 +19,7 @@ export const LIST_ATTACHMENTS_SCRIPT = `
     // Get attachments
     const attachments = [];
     try {
-      const taskAttachments = task.attachments();
+      const taskAttachments = task.attachments;
       for (let i = 0; i < taskAttachments.length; i++) {
         const attachment = taskAttachments[i];
         const attachmentObj = {
@@ -26,14 +27,14 @@ export const LIST_ATTACHMENTS_SCRIPT = `
         };
 
         try {
-          const filename = attachment.preferredFilename();
-          if (filename) {
-            attachmentObj.name = filename;
+          const name = attachment.name;
+          if (name) {
+            attachmentObj.name = name;
           }
         } catch (e) {}
 
         try {
-          const type = attachment.type();
+          const type = attachment.type;
           if (type) {
             attachmentObj.type = type;
           }
@@ -48,10 +49,10 @@ export const LIST_ATTACHMENTS_SCRIPT = `
     // Get linked files
     const linkedFiles = [];
     try {
-      const urls = task.linkedFileURLs();
+      const urls = task.linkedFileURLs;
       for (let i = 0; i < urls.length; i++) {
         linkedFiles.push({
-          url: urls[i].string()
+          url: urls[i].string
         });
       }
     } catch (e) {
@@ -73,15 +74,16 @@ export const LIST_ATTACHMENTS_SCRIPT = `
 `;
 
 export const ADD_LINKED_FILE_SCRIPT = `
+
   const taskId = {{taskId}};
   const path = {{path}};
 
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -116,15 +118,16 @@ export const ADD_LINKED_FILE_SCRIPT = `
 `;
 
 export const REMOVE_ATTACHMENT_SCRIPT = `
+
   const taskId = {{taskId}};
   const index = {{index}};
 
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -134,7 +137,7 @@ export const REMOVE_ATTACHMENT_SCRIPT = `
     }
 
     // Get attachments
-    const attachments = task.attachments();
+    const attachments = task.attachments;
     if (index < 0 || index >= attachments.length) {
       return JSON.stringify({
         error: true,
@@ -161,15 +164,16 @@ export const REMOVE_ATTACHMENT_SCRIPT = `
 `;
 
 export const REMOVE_LINKED_FILE_SCRIPT = `
+
   const taskId = {{taskId}};
   const urlString = {{urlString}};
 
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }

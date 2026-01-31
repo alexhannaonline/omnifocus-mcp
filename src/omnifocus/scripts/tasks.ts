@@ -1,9 +1,10 @@
 export const LIST_TASKS_SCRIPT = `
+
   const filter = {{filter}};
   const tasks = [];
 
   try {
-    const allTasks = doc.flattenedTasks();
+    const allTasks = flattenedTasks;
     const limit = Math.min(filter.limit || 100, 1000); // Cap at 1000
     let count = 0;
     let hasMore = false;
@@ -13,15 +14,15 @@ export const LIST_TASKS_SCRIPT = `
       const task = allTasks[i];
 
       // Skip if task doesn't match filters
-      if (filter.completed !== undefined && task.completed() !== filter.completed) continue;
-      if (filter.flagged !== undefined && task.flagged() !== filter.flagged) continue;
-      if (filter.inInbox !== undefined && task.inInbox() !== filter.inInbox) continue;
+      if (filter.completed !== undefined && task.completed !== filter.completed) continue;
+      if (filter.flagged !== undefined && task.flagged !== filter.flagged) continue;
+      if (filter.inInbox !== undefined && task.inInbox !== filter.inInbox) continue;
 
       // Search filter
       if (filter.search) {
         try {
-          const name = task.name() || '';
-          const note = task.note() || '';
+          const name = task.name || '';
+          const note = task.note || '';
           const searchText = (name + ' ' + note).toLowerCase();
           if (!searchText.includes(filter.search.toLowerCase())) continue;
         } catch (e) {
@@ -32,9 +33,9 @@ export const LIST_TASKS_SCRIPT = `
       // Project filter
       if (filter.projectId !== undefined) {
         try {
-          const project = task.containingProject();
+          const project = task.containingProject;
           if (filter.projectId === null && project !== null) continue;
-          if (filter.projectId !== null && (!project || project.id() !== filter.projectId)) continue;
+          if (filter.projectId !== null && (!project || project.id.primaryKey !== filter.projectId)) continue;
         } catch (e) {
           continue;
         }
@@ -43,7 +44,7 @@ export const LIST_TASKS_SCRIPT = `
       // Tags filter
       if (filter.tags && filter.tags.length > 0) {
         try {
-          const taskTags = task.tags().map(t => t.name());
+          const taskTags = task.tags.map(t => t.name);
           const hasAllTags = filter.tags.every(tag => taskTags.includes(tag));
           if (!hasAllTags) continue;
         } catch (e) {
@@ -54,7 +55,7 @@ export const LIST_TASKS_SCRIPT = `
       // Date filters
       if (filter.dueBefore || filter.dueAfter) {
         try {
-          const dueDate = task.dueDate();
+          const dueDate = task.dueDate;
           if (!dueDate && (filter.dueBefore || filter.dueAfter)) continue; // Skip tasks without due dates
           if (filter.dueBefore && dueDate > new Date(filter.dueBefore)) continue;
           if (filter.dueAfter && dueDate < new Date(filter.dueAfter)) continue;
@@ -65,7 +66,7 @@ export const LIST_TASKS_SCRIPT = `
 
       if (filter.deferBefore || filter.deferAfter) {
         try {
-          const deferDate = task.deferDate();
+          const deferDate = task.deferDate;
           if (!deferDate && (filter.deferBefore || filter.deferAfter)) continue; // Skip tasks without defer dates
           if (filter.deferBefore && deferDate > new Date(filter.deferBefore)) continue;
           if (filter.deferAfter && deferDate < new Date(filter.deferAfter)) continue;
@@ -77,8 +78,8 @@ export const LIST_TASKS_SCRIPT = `
       // Available filter
       if (filter.available) {
         try {
-          if (task.completed() || task.dropped()) continue;
-          const deferDate = task.deferDate();
+          if (task.completed || task.dropped) continue;
+          const deferDate = task.deferDate;
           if (deferDate && deferDate > new Date()) continue;
         } catch (e) {
           continue;
@@ -93,49 +94,49 @@ export const LIST_TASKS_SCRIPT = `
 
       // Build task object with safe property access
       const taskObj = {
-        id: task.id(),
-        name: task.name(),
-        completed: task.completed(),
-        flagged: task.flagged(),
-        inInbox: task.inInbox(),
-        hasChildren: task.hasChildren()
+        id: task.id.primaryKey,
+        name: task.name,
+        completed: task.completed,
+        flagged: task.flagged,
+        inInbox: task.inInbox,
+        hasChildren: task.hasChildren
       };
 
       // Add parent task ID if exists
       try {
-        const parent = task.parent();
+        const parent = task.parent;
         if (parent) {
-          taskObj.parentId = parent.id();
+          taskObj.parentId = parent.id.primaryKey;
         }
       } catch (e) {}
 
       // Add optional properties safely
       try {
-        const note = task.note();
+        const note = task.note;
         if (note) taskObj.note = note;
       } catch (e) {}
 
       try {
-        const project = task.containingProject();
+        const project = task.containingProject;
         if (project) {
-          taskObj.project = project.name();
-          taskObj.projectId = project.id();
+          taskObj.project = project.name;
+          taskObj.projectId = project.id.primaryKey;
         }
       } catch (e) {}
 
       try {
-        const dueDate = task.dueDate();
+        const dueDate = task.dueDate;
         if (dueDate) taskObj.dueDate = dueDate.toISOString();
       } catch (e) {}
 
       try {
-        const deferDate = task.deferDate();
+        const deferDate = task.deferDate;
         if (deferDate) taskObj.deferDate = deferDate.toISOString();
       } catch (e) {}
 
       try {
-        const tags = task.tags();
-        taskObj.tags = tags.map(t => t.name());
+        const tags = task.tags;
+        taskObj.tags = tags.map(t => t.name);
       } catch (e) {
         taskObj.tags = [];
       }
@@ -178,30 +179,19 @@ export const LIST_TASKS_SCRIPT = `
 `;
 
 export const CREATE_TASK_SCRIPT = `
+
   const taskData = {{taskData}};
-  
+
   try {
-    // Create task data object for JXA
-    const taskObj = {
-      name: taskData.name
-    };
-    
-    // Add optional properties
-    if (taskData.note !== undefined) taskObj.note = taskData.note;
-    if (taskData.flagged !== undefined) taskObj.flagged = taskData.flagged;
-    if (taskData.dueDate !== undefined && taskData.dueDate) taskObj.dueDate = new Date(taskData.dueDate);
-    if (taskData.deferDate !== undefined && taskData.deferDate) taskObj.deferDate = new Date(taskData.deferDate);
-    if (taskData.estimatedMinutes !== undefined) taskObj.estimatedMinutes = taskData.estimatedMinutes;
-    
     // Handle tags before task creation
     const tagsToAdd = [];
     const tagsNotFound = [];
     if (taskData.tags && taskData.tags.length > 0) {
-      const existingTags = doc.flattenedTags();
+      const existingTags = flattenedTags;
       for (const tagName of taskData.tags) {
         let found = false;
         for (let i = 0; i < existingTags.length; i++) {
-          if (existingTags[i].name() === tagName) {
+          if (existingTags[i].name === tagName) {
             tagsToAdd.push(existingTags[i]);
             found = true;
             break;
@@ -212,74 +202,63 @@ export const CREATE_TASK_SCRIPT = `
         }
       }
     }
-    
-    // Create the task using JXA syntax
-    const newTask = app.InboxTask(taskObj);
-    const inbox = doc.inboxTasks;
-    inbox.push(newTask);
 
-    // Try to get the real OmniFocus ID by finding the task we just created
-    let taskId = null;
-    let createdTask = null;
+    // Create the task using Omni Automation syntax
+    const newTask = new Task(taskData.name, inbox.ending);
+
+    // Set optional properties (use != null to skip both null and undefined from formatValue)
+    if (taskData.note != null) newTask.note = taskData.note;
+    if (taskData.flagged != null) newTask.flagged = taskData.flagged;
+    if (taskData.dueDate != null) newTask.dueDate = new Date(taskData.dueDate);
+    if (taskData.deferDate != null) newTask.deferDate = new Date(taskData.deferDate);
+    if (taskData.estimatedMinutes != null) newTask.estimatedMinutes = taskData.estimatedMinutes;
+
+    let taskId = newTask.id.primaryKey;
     let assignedProjectName = null;
 
-    try {
-      const allInboxTasks = doc.inboxTasks();
-      for (let i = allInboxTasks.length - 1; i >= 0; i--) {
-        const task = allInboxTasks[i];
-        if (task.name() === taskData.name) {
-          taskId = task.id();
-          createdTask = task;
-
-          // Assign to project if projectId provided
-          if (taskData.projectId) {
-            const projects = doc.flattenedProjects();
-            let projectFound = false;
-            for (let j = 0; j < projects.length; j++) {
-              if (projects[j].id() === taskData.projectId) {
-                task.assignedContainer = projects[j];
-                assignedProjectName = projects[j].name();
-                projectFound = true;
-                break;
-              }
-            }
-            if (!projectFound) {
-              // Check if this looks like Claude Desktop extracted a number from an alphanumeric ID
-              const isNumericOnly = /^\d+$/.test(taskData.projectId);
-              let errorMessage = "Project with ID '" + taskData.projectId + "' not found";
-
-              if (isNumericOnly) {
-                errorMessage += ". CLAUDE DESKTOP BUG DETECTED: Claude Desktop may have extracted numbers from an alphanumeric project ID (e.g., '547' from 'az5Ieo4ip7K'). Please use the list_projects tool to get the correct full project ID and try again.";
-              }
-
-              return JSON.stringify({
-                error: true,
-                message: errorMessage
-              });
-            }
-          }
-
-          // Add tags to the created task
-          if (tagsToAdd.length > 0) {
-            try {
-              task.addTags(tagsToAdd);
-            } catch (tagError) {
-              // Fail-fast: Tag assignment errors should not be silently ignored
-              return JSON.stringify({
-                error: true,
-                message: "Failed to add tags to task: " + tagError.toString()
-              });
-            }
-          }
-
+    // Assign to project if projectId provided
+    if (taskData.projectId) {
+      const projects = flattenedProjects;
+      let projectFound = false;
+      for (let j = 0; j < projects.length; j++) {
+        if (projects[j].id.primaryKey === taskData.projectId) {
+          newTask.assignedContainer = projects[j];
+          assignedProjectName = projects[j].name;
+          projectFound = true;
           break;
         }
       }
-    } catch (e) {
-      // If we can't get the real ID, generate a temporary one
-      taskId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
+      if (!projectFound) {
+        // Check if this looks like Claude Desktop extracted a number from an alphanumeric ID
+        const isNumericOnly = /^\d+$/.test(taskData.projectId);
+        let errorMessage = "Project with ID '" + taskData.projectId + "' not found";
+
+        if (isNumericOnly) {
+          errorMessage += ". CLAUDE DESKTOP BUG DETECTED: Claude Desktop may have extracted numbers from an alphanumeric project ID (e.g., '547' from 'az5Ieo4ip7K'). Please use the list_projects tool to get the correct full project ID and try again.";
+        }
+
+        return JSON.stringify({
+          error: true,
+          message: errorMessage
+        });
+      }
     }
-    
+
+    // Add tags to the created task
+    if (tagsToAdd.length > 0) {
+      try {
+        for (const tag of tagsToAdd) {
+          newTask.addTag(tag);
+        }
+      } catch (tagError) {
+        // Fail-fast: Tag assignment errors should not be silently ignored
+        return JSON.stringify({
+          error: true,
+          message: "Failed to add tags to task: " + tagError.toString()
+        });
+      }
+    }
+
     // Build warnings for tag issues
     const warnings = [];
     if (tagsNotFound.length > 0) {
@@ -316,15 +295,16 @@ export const CREATE_TASK_SCRIPT = `
 
 // Simplified version to debug freeze issue
 export const UPDATE_TASK_SCRIPT_SIMPLE = `
+
   const taskId = {{taskId}};
   const updates = {{updates}};
-  
+
   try {
     // Find task by ID - simplified search
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) { // Search all tasks
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -332,12 +312,12 @@ export const UPDATE_TASK_SCRIPT_SIMPLE = `
     if (!task) {
       return JSON.stringify({ error: true, message: 'Task not found' });
     }
-    
+
     // Apply updates - basic properties
     if (updates.name !== undefined) task.name = updates.name;
-    if (updates.note !== undefined) task.note = updates.note;
+    if (updates.note !== undefined) task.note = updates.note || '';
     if (updates.flagged !== undefined) task.flagged = updates.flagged;
-    
+
     // Handle project assignment (simplified version)
     if (updates.projectId !== undefined) {
       if (updates.projectId === "") {
@@ -345,10 +325,10 @@ export const UPDATE_TASK_SCRIPT_SIMPLE = `
         task.assignedContainer = null;
       } else {
         // Find and assign project by ID
-        const projects = doc.flattenedProjects();
+        const projects = flattenedProjects;
         let projectFound = false;
         for (let i = 0; i < projects.length; i++) {
-          if (projects[i].id() === updates.projectId) {
+          if (projects[i].id.primaryKey === updates.projectId) {
             task.assignedContainer = projects[i];
             projectFound = true;
             break;
@@ -358,11 +338,11 @@ export const UPDATE_TASK_SCRIPT_SIMPLE = `
           // Check if this looks like Claude Desktop extracted a number from an alphanumeric ID
           const isNumericOnly = /^\d+$/.test(updates.projectId);
           let errorMessage = "Project with ID '" + updates.projectId + "' not found";
-          
+
           if (isNumericOnly) {
             errorMessage += ". CLAUDE DESKTOP BUG DETECTED: Claude Desktop may have extracted numbers from an alphanumeric project ID (e.g., '547' from 'az5Ieo4ip7K'). Please use the list_projects tool to get the correct full project ID and try again.";
           }
-          
+
           return JSON.stringify({
             error: true,
             message: errorMessage
@@ -370,15 +350,15 @@ export const UPDATE_TASK_SCRIPT_SIMPLE = `
         }
       }
     }
-    
+
     // Build response with updated fields
     const response = {
-      id: task.id(),
-      name: task.name(),
+      id: task.id.primaryKey,
+      name: task.name,
       updated: true,
       changes: {}
     };
-    
+
     // Track what was actually changed
     if (updates.name !== undefined) response.changes.name = updates.name;
     if (updates.note !== undefined) response.changes.note = updates.note;
@@ -386,15 +366,15 @@ export const UPDATE_TASK_SCRIPT_SIMPLE = `
     if (updates.projectId !== undefined) {
       response.changes.projectId = updates.projectId;
       if (updates.projectId !== "") {
-        const project = task.containingProject();
+        const project = task.containingProject;
         if (project) {
-          response.changes.projectName = project.name();
+          response.changes.projectName = project.name;
         }
       } else {
         response.changes.projectName = "Inbox";
       }
     }
-    
+
     return JSON.stringify(response);
   } catch (error) {
     return JSON.stringify({
@@ -405,15 +385,16 @@ export const UPDATE_TASK_SCRIPT_SIMPLE = `
 `;
 
 export const UPDATE_TASK_SCRIPT = `
+
   const taskId = {{taskId}};
   const updates = {{updates}};
-  
+
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -421,10 +402,10 @@ export const UPDATE_TASK_SCRIPT = `
     if (!task) {
       return JSON.stringify({ error: true, message: 'Task not found' });
     }
-    
+
     // Apply updates using property setters
     if (updates.name !== undefined) task.name = updates.name;
-    if (updates.note !== undefined) task.note = updates.note;
+    if (updates.note !== undefined) task.note = updates.note || '';
     if (updates.flagged !== undefined) task.flagged = updates.flagged;
     if (updates.dueDate !== undefined) {
       task.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
@@ -435,7 +416,7 @@ export const UPDATE_TASK_SCRIPT = `
     if (updates.estimatedMinutes !== undefined) {
       task.estimatedMinutes = updates.estimatedMinutes;
     }
-    
+
     // Update project assignment
     if (updates.projectId !== undefined) {
       if (updates.projectId === "") {
@@ -443,10 +424,10 @@ export const UPDATE_TASK_SCRIPT = `
         task.assignedContainer = null;
       } else {
         // Find and assign project
-        const projects = doc.flattenedProjects();
+        const projects = flattenedProjects;
         let projectFound = false;
         for (let i = 0; i < projects.length; i++) {
-          if (projects[i].id() === updates.projectId) {
+          if (projects[i].id.primaryKey === updates.projectId) {
             task.assignedContainer = projects[i];
             projectFound = true;
             break;
@@ -456,11 +437,11 @@ export const UPDATE_TASK_SCRIPT = `
           // Check if this looks like Claude Desktop extracted a number from an alphanumeric ID
           const isNumericOnly = /^\d+$/.test(updates.projectId);
           let errorMessage = "Project with ID '" + updates.projectId + "' not found";
-          
+
           if (isNumericOnly) {
             errorMessage += ". CLAUDE DESKTOP BUG DETECTED: Claude Desktop may have extracted numbers from an alphanumeric project ID (e.g., '547' from 'az5Ieo4ip7K'). Please use the list_projects tool to get the correct full project ID and try again.";
           }
-          
+
           return JSON.stringify({
             error: true,
             message: errorMessage
@@ -468,26 +449,27 @@ export const UPDATE_TASK_SCRIPT = `
         }
       }
     }
-    
+
     // Update tags
     if (updates.tags !== undefined) {
-      // Get current tags
-      const currentTags = task.tags();
-      
-      // Remove all existing tags
+      // Get current tags and remove them
+      const currentTags = task.tags;
+
       if (currentTags.length > 0) {
-        task.removeTags(currentTags);
+        for (const tag of currentTags) {
+          task.removeTag(tag);
+        }
       }
-      
+
       // Add new tags
       if (updates.tags.length > 0) {
-        const existingTags = doc.flattenedTags();
+        const existingTags = flattenedTags;
         const tagsToAdd = [];
-        
+
         for (const tagName of updates.tags) {
           let found = false;
           for (let i = 0; i < existingTags.length; i++) {
-            if (existingTags[i].name() === tagName) {
+            if (existingTags[i].name === tagName) {
               tagsToAdd.push(existingTags[i]);
               found = true;
               break;
@@ -495,26 +477,27 @@ export const UPDATE_TASK_SCRIPT = `
           }
           if (!found) {
             // Create new tag
-            const newTag = app.Tag({name: tagName});
-            doc.tags.push(newTag);
+            const newTag = new Tag(tagName, tags.ending);
             tagsToAdd.push(newTag);
           }
         }
-        
+
         if (tagsToAdd.length > 0) {
-          task.addTags(tagsToAdd);
+          for (const tag of tagsToAdd) {
+            task.addTag(tag);
+          }
         }
       }
     }
-    
+
     // Build response with updated fields
     const response = {
-      id: task.id(),
-      name: task.name(),
+      id: task.id.primaryKey,
+      name: task.name,
       updated: true,
       changes: {}
     };
-    
+
     // Track what was actually changed
     if (updates.name !== undefined) response.changes.name = updates.name;
     if (updates.note !== undefined) response.changes.note = updates.note;
@@ -526,15 +509,15 @@ export const UPDATE_TASK_SCRIPT = `
     if (updates.projectId !== undefined) {
       response.changes.projectId = updates.projectId;
       if (updates.projectId !== "") {
-        const project = task.containingProject();
+        const project = task.containingProject;
         if (project) {
-          response.changes.projectName = project.name();
+          response.changes.projectName = project.name;
         }
       } else {
         response.changes.projectName = "Inbox";
       }
     }
-    
+
     return JSON.stringify(response);
   } catch (error) {
     return JSON.stringify({
@@ -546,14 +529,15 @@ export const UPDATE_TASK_SCRIPT = `
 `;
 
 export const COMPLETE_TASK_SCRIPT = `
+
   const taskId = {{taskId}};
-  
+
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -561,18 +545,18 @@ export const COMPLETE_TASK_SCRIPT = `
     if (!task) {
       return JSON.stringify({ error: true, message: 'Task not found' });
     }
-    
-    if (task.completed()) {
+
+    if (task.completed) {
       return JSON.stringify({ error: true, message: 'Task already completed' });
     }
-    
-    // Mark as complete using JXA property setter
-    task.completed = true;
-    
+
+    // Mark as complete using Omni Automation method
+    task.markComplete();
+
     return JSON.stringify({
-      id: task.id(),
+      id: task.id.primaryKey,
       completed: true,
-      completionDate: task.completionDate() ? task.completionDate().toISOString() : new Date().toISOString()
+      completionDate: task.completionDate ? task.completionDate.toISOString() : new Date().toISOString()
     });
   } catch (error) {
     return JSON.stringify({
@@ -583,48 +567,19 @@ export const COMPLETE_TASK_SCRIPT = `
   }
 `;
 
-// Omni Automation script for completing tasks (bypasses JXA permission issues)
-export const COMPLETE_TASK_OMNI_SCRIPT = `
-  const taskId = {{taskId}};
-  
-  try {
-    // Find task by ID using Omni Automation
-    const tasks = flattenedTasks;
-    let targetTask = null;
-    
-    tasks.forEach(task => {
-      if (task.id() === taskId) {
-        targetTask = task;
-      }
-    });
-    
-    if (!targetTask) {
-      throw new Error('Task not found');
-    }
-    
-    if (targetTask.completed) {
-      throw new Error('Task already completed');
-    }
-    
-    // Mark as complete using Omni Automation method
-    targetTask.markComplete();
-    
-    // Return success (URL scheme doesn't return values directly)
-    return true;
-  } catch (error) {
-    throw new Error("Failed to complete task: " + error.toString());
-  }
-`;
+// Deprecated: kept as alias for backward compatibility. Now identical to COMPLETE_TASK_SCRIPT.
+export const COMPLETE_TASK_OMNI_SCRIPT = COMPLETE_TASK_SCRIPT;
 
 export const DELETE_TASK_SCRIPT = `
+
   const taskId = {{taskId}};
-  
+
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -632,12 +587,12 @@ export const DELETE_TASK_SCRIPT = `
     if (!task) {
       return JSON.stringify({ error: true, message: 'Task not found' });
     }
-    
-    const taskName = task.name();
-    
-    // Delete using JXA app.delete method
-    app.delete(task);
-    
+
+    const taskName = task.name;
+
+    // Delete using Omni Automation method
+    deleteObject(task);
+
     return JSON.stringify({
       id: taskId,
       deleted: true,
@@ -652,74 +607,47 @@ export const DELETE_TASK_SCRIPT = `
   }
 `;
 
-// Omni Automation script for deleting tasks (bypasses JXA permission issues)
-export const DELETE_TASK_OMNI_SCRIPT = `
-  const taskId = {{taskId}};
-  
-  try {
-    // Find task by ID using Omni Automation
-    const tasks = flattenedTasks;
-    let targetTask = null;
-    
-    tasks.forEach(task => {
-      if (task.id() === taskId) {
-        targetTask = task;
-      }
-    });
-    
-    if (!targetTask) {
-      throw new Error('Task not found');
-    }
-    
-    const taskName = targetTask.name;
-    
-    // Delete using Omni Automation method
-    deleteObject(targetTask);
-    
-    // Return success (URL scheme doesn't return values directly)
-    return true;
-  } catch (error) {
-    throw new Error("Failed to delete task: " + error.toString());
-  }
-`;
+// Deprecated: kept as alias for backward compatibility. Now identical to DELETE_TASK_SCRIPT.
+export const DELETE_TASK_OMNI_SCRIPT = DELETE_TASK_SCRIPT;
 
 export const TODAYS_AGENDA_SCRIPT = `
+
   const options = {{options}};
   const tasks = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
+
   try {
-    const allTasks = doc.flattenedTasks();
+    const allTasks = flattenedTasks;
     const startTime = Date.now();
-    
+
     let dueTodayCount = 0;
     let overdueCount = 0;
     let flaggedCount = 0;
-    
+
     for (let i = 0; i < allTasks.length; i++) {
       const task = allTasks[i];
-      
+
       // Skip completed tasks
-      if (task.completed()) continue;
-      
+      if (task.completed) continue;
+
       // Check if available (if required)
       if (options.includeAvailable) {
         try {
-          const deferDate = task.deferDate();
+          const deferDate = task.deferDate;
           if (deferDate && deferDate > new Date()) continue;
           // Note: Full availability check would include blocked status
         } catch (e) {}
       }
-      
+
       let includeTask = false;
       let reason = '';
-      
+
       // Check due date
       try {
-        const dueDate = task.dueDate();
+        const dueDate = task.dueDate;
         if (dueDate) {
           if (dueDate < today && options.includeOverdue) {
             includeTask = true;
@@ -732,67 +660,67 @@ export const TODAYS_AGENDA_SCRIPT = `
           }
         }
       } catch (e) {}
-      
+
       // Check flagged status
-      if (!includeTask && options.includeFlagged && task.flagged()) {
+      if (!includeTask && options.includeFlagged && task.flagged) {
         includeTask = true;
         reason = 'flagged';
         flaggedCount++;
       }
-      
+
       if (includeTask) {
         // Build task object
         const taskObj = {
-          id: task.id(),
-          name: task.name(),
+          id: task.id.primaryKey,
+          name: task.name,
           completed: false,
-          flagged: task.flagged(),
+          flagged: task.flagged,
           reason: reason
         };
-        
+
         // Add optional properties
         try {
-          const note = task.note();
+          const note = task.note;
           if (note) taskObj.note = note;
         } catch (e) {}
-        
+
         try {
-          const project = task.containingProject();
+          const project = task.containingProject;
           if (project) {
-            taskObj.project = project.name();
-            taskObj.projectId = project.id();
+            taskObj.project = project.name;
+            taskObj.projectId = project.id.primaryKey;
           }
         } catch (e) {}
-        
+
         try {
-          const dueDate = task.dueDate();
+          const dueDate = task.dueDate;
           if (dueDate) taskObj.dueDate = dueDate.toISOString();
         } catch (e) {}
-        
+
         try {
-          const deferDate = task.deferDate();
+          const deferDate = task.deferDate;
           if (deferDate) taskObj.deferDate = deferDate.toISOString();
         } catch (e) {}
-        
+
         try {
-          const tags = task.tags();
-          taskObj.tags = tags.map(t => t.name());
+          const tags = task.tags;
+          taskObj.tags = tags.map(t => t.name);
         } catch (e) {
           taskObj.tags = [];
         }
-        
+
         tasks.push(taskObj);
       }
     }
-    
+
     const endTime = Date.now();
-    
+
     // Sort tasks by priority: overdue first, then due today, then flagged
     tasks.sort((a, b) => {
       const priority = {'overdue': 0, 'due_today': 1, 'flagged': 2};
       return priority[a.reason] - priority[b.reason];
     });
-    
+
     return JSON.stringify({
       tasks: tasks,
       summary: {
@@ -813,77 +741,78 @@ export const TODAYS_AGENDA_SCRIPT = `
 `;
 
 export const GET_TASK_COUNT_SCRIPT = `
+
   const filter = {{filter}};
-  
+
   try {
-    const allTasks = doc.flattenedTasks();
+    const allTasks = flattenedTasks;
     let count = 0;
     const startTime = Date.now();
-    
+
     for (let i = 0; i < allTasks.length; i++) {
       const task = allTasks[i];
-      
+
       // Skip if task doesn't match filters
-      if (filter.completed !== undefined && task.completed() !== filter.completed) continue;
-      if (filter.flagged !== undefined && task.flagged() !== filter.flagged) continue;
-      if (filter.inInbox !== undefined && task.inInbox() !== filter.inInbox) continue;
-      
+      if (filter.completed !== undefined && task.completed !== filter.completed) continue;
+      if (filter.flagged !== undefined && task.flagged !== filter.flagged) continue;
+      if (filter.inInbox !== undefined && task.inInbox !== filter.inInbox) continue;
+
       // Additional filters that require more processing
       if (filter.projectId !== undefined) {
         try {
-          const project = task.containingProject();
+          const project = task.containingProject;
           if (filter.projectId === null && project !== null) continue;
-          if (filter.projectId !== null && (!project || project.id() !== filter.projectId)) continue;
+          if (filter.projectId !== null && (!project || project.id.primaryKey !== filter.projectId)) continue;
         } catch (e) {
           continue;
         }
       }
-      
+
       if (filter.tags && filter.tags.length > 0) {
         try {
-          const taskTags = task.tags().map(t => t.name());
+          const taskTags = task.tags.map(t => t.name);
           const hasAllTags = filter.tags.every(tag => taskTags.includes(tag));
           if (!hasAllTags) continue;
         } catch (e) {
           continue;
         }
       }
-      
+
       if (filter.search) {
         try {
-          const name = task.name() || '';
-          const note = task.note() || '';
+          const name = task.name || '';
+          const note = task.note || '';
           const searchText = (name + ' ' + note).toLowerCase();
           if (!searchText.includes(filter.search.toLowerCase())) continue;
         } catch (e) {
           continue;
         }
       }
-      
+
       if (filter.dueBefore || filter.dueAfter) {
         try {
-          const dueDate = task.dueDate();
+          const dueDate = task.dueDate;
           if (filter.dueBefore && (!dueDate || dueDate > new Date(filter.dueBefore))) continue;
           if (filter.dueAfter && (!dueDate || dueDate < new Date(filter.dueAfter))) continue;
         } catch (e) {
           if (filter.dueBefore || filter.dueAfter) continue;
         }
       }
-      
+
       if (filter.deferBefore || filter.deferAfter) {
         try {
-          const deferDate = task.deferDate();
+          const deferDate = task.deferDate;
           if (filter.deferBefore && (!deferDate || deferDate > new Date(filter.deferBefore))) continue;
           if (filter.deferAfter && (!deferDate || deferDate < new Date(filter.deferAfter))) continue;
         } catch (e) {
           if (filter.deferBefore || filter.deferAfter) continue;
         }
       }
-      
+
       if (filter.available) {
         try {
-          if (task.completed() || task.dropped()) continue;
-          const deferDate = task.deferDate();
+          if (task.completed || task.dropped) continue;
+          const deferDate = task.deferDate;
           if (deferDate && deferDate > new Date()) continue;
           // Check if blocked (has incomplete sequential predecessors)
           // This is simplified - full availability logic is complex
@@ -891,12 +820,12 @@ export const GET_TASK_COUNT_SCRIPT = `
           continue;
         }
       }
-      
+
       count++;
     }
-    
+
     const endTime = Date.now();
-    
+
     return JSON.stringify({
       count: count,
       query_time_ms: endTime - startTime,

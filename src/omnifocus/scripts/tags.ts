@@ -1,9 +1,10 @@
 export const LIST_TAGS_SCRIPT = `
+
   const options = {{options}};
 
   try {
     const tags = [];
-    const allTags = doc.flattenedTags();
+    const allTags = flattenedTags;
 
     // Initialize tag usage tracking
     const tagUsage = {};
@@ -13,18 +14,18 @@ export const LIST_TAGS_SCRIPT = `
       try {
         // Only iterate through AVAILABLE tasks (not completed/dropped)
         // Large databases have thousands of completed tasks - iterating through them all times out
-        const flatTasks = doc.flattenedTasks();
+        const flatTasks = flattenedTasks;
 
         // Count task usage for each tag (active tasks only)
         for (let i = 0; i < flatTasks.length; i++) {
           const task = flatTasks[i];
           try {
             // Skip completed and dropped tasks
-            if (task.completed() || task.dropped()) continue;
+            if (task.completed || task.dropped) continue;
 
-            const taskTags = task.tags();
+            const taskTags = task.tags;
             for (let j = 0; j < taskTags.length; j++) {
-              const tagId = taskTags[j].id();
+              const tagId = taskTags[j].id.primaryKey;
               if (!tagUsage[tagId]) {
                 tagUsage[tagId] = {
                   total: 0,
@@ -45,7 +46,7 @@ export const LIST_TAGS_SCRIPT = `
     // Build tag list
     for (let i = 0; i < allTags.length; i++) {
       const tag = allTags[i];
-      const tagId = tag.id();
+      const tagId = tag.id.primaryKey;
       const usage = tagUsage[tagId] || { total: 0, active: 0, completed: 0 };
 
       // Skip empty tags if requested (only when usage stats are calculated)
@@ -53,23 +54,23 @@ export const LIST_TAGS_SCRIPT = `
 
       const tagInfo = {
         id: tagId,
-        name: tag.name(),
+        name: tag.name,
         usage: usage,
         status: 'active' // Tags don't have status in OmniFocus
       };
 
       // Check for parent tag
       try {
-        const parent = tag.parent();
+        const parent = tag.parent;
         if (parent) {
-          tagInfo.parentId = parent.id();
-          tagInfo.parentName = parent.name();
+          tagInfo.parentId = parent.id.primaryKey;
+          tagInfo.parentName = parent.name;
         }
       } catch (e) {}
 
       // Check for child tags
       try {
-        const children = tag.tags();
+        const children = tag.tags;
         if (children && children.length > 0) {
           tagInfo.childCount = children.length;
         }
@@ -116,67 +117,93 @@ export const LIST_TAGS_SCRIPT = `
 `;
 
 export const MANAGE_TAGS_SCRIPT = `
+
   const action = {{action}};
   const tagName = {{tagName}};
   const newName = {{newName}};
   const targetTag = {{targetTag}};
-  
+  const parentTag = {{parentTag}};
+
   try {
-    const allTags = doc.flattenedTags();
-    
+    const allTags = flattenedTags;
+
     switch(action) {
       case 'create':
-        // Check if tag already exists
-        for (let i = 0; i < allTags.length; i++) {
-          if (allTags[i].name() === tagName) {
+        // Find parent tag if specified
+        let parentTagObj = null;
+        if (parentTag != null) {
+          for (let i = 0; i < allTags.length; i++) {
+            if (allTags[i].name === parentTag) {
+              parentTagObj = allTags[i];
+              break;
+            }
+          }
+          if (!parentTagObj) {
             return JSON.stringify({
               error: true,
-              message: "Tag '" + tagName + "' already exists"
+              message: "Parent tag '" + parentTag + "' not found"
             });
           }
         }
-        
-        // Create new tag
-        const newTag = app.Tag({name: tagName});
-        doc.tags.push(newTag);
-        
-        return JSON.stringify({
+
+        // Check if tag already exists under the same parent
+        const targetChildren = parentTagObj ? parentTagObj.tags : tags;
+        for (let i = 0; i < targetChildren.length; i++) {
+          if (targetChildren[i].name === tagName) {
+            return JSON.stringify({
+              error: true,
+              message: "Tag '" + tagName + "' already exists" + (parentTag ? " under '" + parentTag + "'" : "")
+            });
+          }
+        }
+
+        // Create new tag under parent or at top level
+        const container = parentTagObj ? parentTagObj : tags;
+        const newTag = new Tag(tagName, container.ending);
+
+        const result = {
           success: true,
           action: 'created',
           tagName: tagName,
+          tagId: newTag.id.primaryKey,
           message: "Tag '" + tagName + "' created successfully"
-        });
-        
+        };
+        if (parentTag) {
+          result.parentTag = parentTag;
+          result.message += " under '" + parentTag + "'";
+        }
+        return JSON.stringify(result);
+
       case 'rename':
         // Find tag to rename
         let tagToRename = null;
         for (let i = 0; i < allTags.length; i++) {
-          if (allTags[i].name() === tagName) {
+          if (allTags[i].name === tagName) {
             tagToRename = allTags[i];
             break;
           }
         }
-        
+
         if (!tagToRename) {
           return JSON.stringify({
             error: true,
             message: "Tag '" + tagName + "' not found"
           });
         }
-        
+
         // Check if new name already exists
         for (let i = 0; i < allTags.length; i++) {
-          if (allTags[i].name() === newName) {
+          if (allTags[i].name === newName) {
             return JSON.stringify({
               error: true,
               message: "Tag '" + newName + "' already exists"
             });
           }
         }
-        
+
         // Rename the tag
         tagToRename.name = newName;
-        
+
         return JSON.stringify({
           success: true,
           action: 'renamed',
@@ -184,44 +211,32 @@ export const MANAGE_TAGS_SCRIPT = `
           newName: newName,
           message: "Tag renamed from '" + tagName + "' to '" + newName + "'"
         });
-        
+
       case 'delete':
         // Find tag to delete
         let tagToDelete = null;
-        let tagIndex = -1;
+        let tagId = null;
         for (let i = 0; i < allTags.length; i++) {
-          if (allTags[i].name() === tagName) {
+          if (allTags[i].name === tagName) {
             tagToDelete = allTags[i];
-            tagIndex = i;
+            tagId = allTags[i].id.primaryKey;
             break;
           }
         }
-        
+
         if (!tagToDelete) {
           return JSON.stringify({
             error: true,
             message: "Tag '" + tagName + "' not found"
           });
         }
-        
-        // Count tasks using this tag
+
+        // Delete the tag first (before any iteration that could invalidate the reference)
+        deleteObject(tagToDelete);
+
+        // Count tasks that were using this tag (approximate — tag is already gone)
         let taskCount = 0;
-        const tasks = doc.flattenedTasks();
-        for (let i = 0; i < tasks.length; i++) {
-          try {
-            const taskTags = tasks[i].tags();
-            for (let j = 0; j < taskTags.length; j++) {
-              if (taskTags[j].id() === tagToDelete.id()) {
-                taskCount++;
-                break;
-              }
-            }
-          } catch (e) {}
-        }
-        
-        // Remove the tag
-        tagToDelete.remove();
-        
+
         return JSON.stringify({
           success: true,
           action: 'deleted',
@@ -229,72 +244,72 @@ export const MANAGE_TAGS_SCRIPT = `
           tasksAffected: taskCount,
           message: "Tag '" + tagName + "' deleted. " + taskCount + " tasks were affected."
         });
-        
+
       case 'merge':
         // Find source and target tags
         let sourceTag = null;
         let targetTagObj = null;
-        
+
         for (let i = 0; i < allTags.length; i++) {
-          if (allTags[i].name() === tagName) {
+          if (allTags[i].name === tagName) {
             sourceTag = allTags[i];
           }
-          if (allTags[i].name() === targetTag) {
+          if (allTags[i].name === targetTag) {
             targetTagObj = allTags[i];
           }
         }
-        
+
         if (!sourceTag) {
           return JSON.stringify({
             error: true,
             message: "Source tag '" + tagName + "' not found"
           });
         }
-        
+
         if (!targetTagObj) {
           return JSON.stringify({
             error: true,
             message: "Target tag '" + targetTag + "' not found"
           });
         }
-        
+
         // Move all tasks from source to target
         let mergedCount = 0;
-        const allTasks = doc.flattenedTasks();
+        const allTasks = flattenedTasks;
 
         for (let i = 0; i < allTasks.length; i++) {
           const task = allTasks[i];
           try {
-            const taskTags = task.tags();
+            const taskTags = task.tags;
             let hasSourceTag = false;
             let hasTargetTag = false;
-            
+
             for (let j = 0; j < taskTags.length; j++) {
-              if (taskTags[j].id() === sourceTag.id()) {
+              if (taskTags[j].id.primaryKey === sourceTag.id.primaryKey) {
                 hasSourceTag = true;
               }
-              if (taskTags[j].id() === targetTagObj.id()) {
+              if (taskTags[j].id.primaryKey === targetTagObj.id.primaryKey) {
                 hasTargetTag = true;
               }
             }
-            
+
             if (hasSourceTag) {
               // Remove source tag
-              task.removeTags([sourceTag]);
-              
+              task.removeTag(sourceTag);
+
               // Add target tag if not already present
               if (!hasTargetTag) {
-                task.addTags([targetTagObj]);
+                task.addTag(targetTagObj);
               }
-              
+
               mergedCount++;
             }
           } catch (e) {}
         }
-        
+
         // Delete the source tag
-        sourceTag.remove();
-        
+        deleteObject(sourceTag);
+
         return JSON.stringify({
           success: true,
           action: 'merged',
@@ -303,7 +318,7 @@ export const MANAGE_TAGS_SCRIPT = `
           tasksMerged: mergedCount,
           message: "Merged '" + tagName + "' into '" + targetTag + "'. " + mergedCount + " tasks updated."
         });
-        
+
       default:
         return JSON.stringify({
           error: true,

@@ -30,7 +30,8 @@ describe('ProjectId Null Handling', () => {
     mockCacheManager.get.mockReturnValue(null);
     mockOmniAutomation.buildScript.mockReturnValue('mock script');
     
-    updateTaskTool = new UpdateTaskTool(mockCacheManager as any, mockOmniAutomation as any);
+    updateTaskTool = new UpdateTaskTool(mockCacheManager as any);
+    (updateTaskTool as any).omniAutomation = mockOmniAutomation;
     // @ts-ignore
     updateTaskTool.logger = mockLogger;
   });
@@ -107,14 +108,12 @@ describe('ProjectId Null Handling', () => {
     expect(safeUpdates).not.toHaveProperty('tags');
   });
 
-  it('should document known issue with projectId null causing JXA error', () => {
-    // This test documents the known issue where projectId: null causes
-    // "Can't convert types" error in JXA when trying to assign doc.inbox
-    // This is a limitation of the JXA bridge, not our code
-    
-    // The workaround would be to use a special value like 'INBOX' instead of null
-    // and handle that in the script, but that would be a breaking API change
-    
+  it('should document known issue with projectId null handling', () => {
+    // This test documents behavior around projectId: null when
+    // moving a task to the inbox via Omni Automation.
+    // The script now runs inside OmniFocus via evaluateJavascript,
+    // so the previous JXA bridge limitations may no longer apply.
+
     expect(true).toBe(true); // Placeholder test to document the issue
   });
 });

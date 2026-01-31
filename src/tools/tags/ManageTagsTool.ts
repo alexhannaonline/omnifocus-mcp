@@ -25,14 +25,18 @@ export class ManageTagsTool extends BaseTool {
         type: 'string',
         description: 'Target tag for merge operation',
       },
+      parentTag: {
+        type: 'string',
+        description: 'Parent tag name for creating nested tags (create action only)',
+      },
     },
     required: ['action', 'tagName'],
   };
 
-  async execute(args: { action: string; tagName: string; newName?: string; targetTag?: string }): Promise<any> {
+  async execute(args: { action: string; tagName: string; newName?: string; targetTag?: string; parentTag?: string }): Promise<any> {
     try {
-      const { action, tagName, newName, targetTag } = args;
-      
+      const { action, tagName, newName, targetTag, parentTag } = args;
+
       // Validate inputs
       if (action === 'rename' && !newName) {
         return {
@@ -52,11 +56,12 @@ export class ManageTagsTool extends BaseTool {
       this.cache.clear('tags');
       
       // Execute script
-      const script = this.omniAutomation.buildScript(MANAGE_TAGS_SCRIPT, { 
+      const script = this.omniAutomation.buildScript(MANAGE_TAGS_SCRIPT, {
         action,
         tagName,
         newName,
-        targetTag
+        targetTag,
+        parentTag
       });
       const result = await this.omniAutomation.execute<any>(script);
       

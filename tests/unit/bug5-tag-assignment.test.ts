@@ -13,10 +13,9 @@ import { CREATE_TASK_SCRIPT } from '../../src/omnifocus/scripts/tasks.js';
 describe('BUG5: Tag Assignment in Create Task Script', () => {
   it('should fail-fast when tag assignment fails (not add to warnings)', () => {
     // Verify the script contains fail-fast error handling for tag errors
-    // NOT: catch (tagError) { tagAddError = tagError.toString(); }
-    // YES: catch (tagError) { return JSON.stringify({ error: true, ... }); }
+    // Uses singular addTag in Omni Automation (not plural addTags)
 
-    expect(CREATE_TASK_SCRIPT).toContain('task.addTags(tagsToAdd)');
+    expect(CREATE_TASK_SCRIPT).toContain('newTask.addTag(tag)');
     expect(CREATE_TASK_SCRIPT).toContain('catch (tagError)');
 
     // Fail-fast pattern: should return error immediately, not store in variable
@@ -37,11 +36,11 @@ describe('BUG5: Tag Assignment in Create Task Script', () => {
 
   it('should attempt to find and add existing tags', () => {
     // Verify the script looks up existing tags before task creation
-    expect(CREATE_TASK_SCRIPT).toContain('doc.flattenedTags()');
+    expect(CREATE_TASK_SCRIPT).toContain('const existingTags = flattenedTags');
     expect(CREATE_TASK_SCRIPT).toContain('tagsToAdd.push(existingTags[i])');
 
-    // Verify it actually adds the tags
-    expect(CREATE_TASK_SCRIPT).toContain('task.addTags(tagsToAdd)');
+    // Verify it actually adds the tags (singular addTag in Omni Automation)
+    expect(CREATE_TASK_SCRIPT).toContain('newTask.addTag(tag)');
   });
 
   it('should return tag assignment status in response', () => {

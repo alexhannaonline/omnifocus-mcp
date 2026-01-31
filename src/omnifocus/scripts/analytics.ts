@@ -1,11 +1,12 @@
 export const PRODUCTIVITY_STATS_SCRIPT = `
+
   const options = {{options}};
-  
+
   try {
     const now = new Date();
     const stats = {};
     const periodStart = new Date();
-    
+
     // Calculate period start date
     switch(options.period) {
       case 'today':
@@ -24,32 +25,32 @@ export const PRODUCTIVITY_STATS_SCRIPT = `
         periodStart.setFullYear(now.getFullYear() - 1);
         break;
     }
-    
-    const allTasks = doc.availableTasks();
+
+    const allTasks = flattenedTasks;
     let totalTasks = 0;
     let completedTasks = 0;
     let createdTasks = 0;
     let overdueCompleted = 0;
     let onTimeCompleted = 0;
-    
+
     const groupedStats = {};
     const dailyStats = {};
-    
+
     for (let i = 0; i < allTasks.length; i++) {
       const task = allTasks[i];
-      
+
       // Check if task is in period
       let inPeriod = false;
       let createdInPeriod = false;
-      
+
       try {
-        const completionDate = task.completionDate();
+        const completionDate = task.completionDate;
         if (completionDate && completionDate >= periodStart) {
           inPeriod = true;
           completedTasks++;
-          
+
           // Check if completed on time
-          const dueDate = task.dueDate();
+          const dueDate = task.dueDate;
           if (dueDate) {
             if (completionDate > dueDate) {
               overdueCompleted++;
@@ -57,51 +58,51 @@ export const PRODUCTIVITY_STATS_SCRIPT = `
               onTimeCompleted++;
             }
           }
-          
+
           // Daily stats
           const dayKey = completionDate.toISOString().split('T')[0];
           dailyStats[dayKey] = (dailyStats[dayKey] || 0) + 1;
         }
       } catch (e) {}
-      
+
       // Check creation date (if available through modified date as proxy)
       try {
-        const modifiedDate = task.modificationDate();
+        const modifiedDate = task.modificationDate;
         if (modifiedDate && modifiedDate >= periodStart) {
           createdInPeriod = true;
           createdTasks++;
         }
       } catch (e) {}
-      
-      if (inPeriod || createdInPeriod || !task.completed()) {
+
+      if (inPeriod || createdInPeriod || !task.completed) {
         totalTasks++;
-        
+
         // Group by requested dimension
         let groupKey = 'Other';
-        
+
         switch(options.groupBy) {
           case 'project':
             try {
-              const project = task.containingProject();
-              groupKey = project ? project.name() : 'No Project';
+              const project = task.containingProject;
+              groupKey = project ? project.name : 'No Project';
             } catch (e) {}
             break;
           case 'tag':
             try {
-              const tags = task.tags();
-              groupKey = tags.length > 0 ? tags[0].name() : 'No Tags';
+              const tags = task.tags;
+              groupKey = tags.length > 0 ? tags[0].name : 'No Tags';
             } catch (e) {}
             break;
           case 'day':
             try {
-              const date = task.completionDate() || task.modificationDate();
+              const date = task.completionDate || task.modificationDate;
               if (date) {
                 groupKey = date.toLocaleDateString();
               }
             } catch (e) {}
             break;
         }
-        
+
         if (!groupedStats[groupKey]) {
           groupedStats[groupKey] = {
             total: 0,
@@ -110,26 +111,26 @@ export const PRODUCTIVITY_STATS_SCRIPT = `
             flagged: 0
           };
         }
-        
+
         groupedStats[groupKey].total++;
-        if (task.completed()) groupedStats[groupKey].completed++;
-        if (task.flagged()) groupedStats[groupKey].flagged++;
+        if (task.completed) groupedStats[groupKey].completed++;
+        if (task.flagged) groupedStats[groupKey].flagged++;
       }
     }
-    
+
     // Calculate completion rate
     const completionRate = totalTasks > 0 ? (completedTasks / totalTasks * 100).toFixed(1) : 0;
     const onTimeRate = completedTasks > 0 ? (onTimeCompleted / completedTasks * 100).toFixed(1) : 0;
-    
+
     // Calculate daily average
     const daysInPeriod = Math.ceil((now - periodStart) / (1000 * 60 * 60 * 24));
     const dailyAverage = (completedTasks / daysInPeriod).toFixed(1);
-    
+
     // Find best and worst days
     const dailyValues = Object.values(dailyStats);
     const bestDay = dailyValues.length > 0 ? Math.max(...dailyValues) : 0;
     const worstDay = dailyValues.length > 0 ? Math.min(...dailyValues) : 0;
-    
+
     return JSON.stringify({
       stats: groupedStats,
       summary: {
@@ -159,24 +160,25 @@ export const PRODUCTIVITY_STATS_SCRIPT = `
 `;
 
 export const TASK_VELOCITY_SCRIPT = `
+
   const options = {{options}};
-  
+
   try {
     const now = new Date();
     const velocityData = [];
     const throughput = {};
-    
+
     // Calculate period intervals
     const intervals = [];
     const intervalDays = options.period === 'day' ? 1 : options.period === 'week' ? 7 : 30;
     const numIntervals = options.period === 'day' ? 30 : options.period === 'week' ? 12 : 12;
-    
+
     for (let i = 0; i < numIntervals; i++) {
       const intervalEnd = new Date(now);
       intervalEnd.setDate(intervalEnd.getDate() - (i * intervalDays));
       const intervalStart = new Date(intervalEnd);
       intervalStart.setDate(intervalStart.getDate() - intervalDays);
-      
+
       intervals.push({
         start: intervalStart,
         end: intervalEnd,
@@ -185,42 +187,42 @@ export const TASK_VELOCITY_SCRIPT = `
         label: intervalEnd.toLocaleDateString()
       });
     }
-    
+
     // Analyze tasks
-    const allTasks = doc.availableTasks();
+    const allTasks = flattenedTasks;
     let totalCompleted = 0;
     let totalCreated = 0;
     const completionTimes = [];
-    
+
     for (let i = 0; i < allTasks.length; i++) {
       const task = allTasks[i];
-      
+
       // Apply filters
       if (options.projectId) {
         try {
-          const project = task.containingProject();
-          if (!project || project.id() !== options.projectId) continue;
+          const project = task.containingProject;
+          if (!project || project.id.primaryKey !== options.projectId) continue;
         } catch (e) {
           continue;
         }
       }
-      
+
       if (options.tags && options.tags.length > 0) {
         try {
-          const taskTags = task.tags().map(t => t.name());
+          const taskTags = task.tags.map(t => t.name);
           const hasTag = options.tags.some(tag => taskTags.includes(tag));
           if (!hasTag) continue;
         } catch (e) {
           continue;
         }
       }
-      
+
       // Track completion
       try {
-        const completionDate = task.completionDate();
+        const completionDate = task.completionDate;
         if (completionDate) {
           totalCompleted++;
-          
+
           // Find which interval this belongs to
           for (const interval of intervals) {
             if (completionDate >= interval.start && completionDate < interval.end) {
@@ -228,10 +230,10 @@ export const TASK_VELOCITY_SCRIPT = `
               break;
             }
           }
-          
+
           // Calculate completion time if we have creation date
           try {
-            const modifiedDate = task.modificationDate();
+            const modifiedDate = task.modificationDate;
             if (modifiedDate && modifiedDate < completionDate) {
               const completionHours = (completionDate - modifiedDate) / (1000 * 60 * 60);
               completionTimes.push(completionHours);
@@ -239,10 +241,10 @@ export const TASK_VELOCITY_SCRIPT = `
           } catch (e) {}
         }
       } catch (e) {}
-      
+
       // Track creation (using modification date as proxy)
       try {
-        const modifiedDate = task.modificationDate();
+        const modifiedDate = task.modificationDate;
         if (modifiedDate) {
           for (const interval of intervals) {
             if (modifiedDate >= interval.start && modifiedDate < interval.end) {
@@ -254,12 +256,12 @@ export const TASK_VELOCITY_SCRIPT = `
         }
       } catch (e) {}
     }
-    
+
     // Calculate velocity metrics
     const recentIntervals = intervals.slice(0, 4);
     const avgCompleted = recentIntervals.reduce((sum, i) => sum + i.completed, 0) / recentIntervals.length;
     const avgCreated = recentIntervals.reduce((sum, i) => sum + i.created, 0) / recentIntervals.length;
-    
+
     // Calculate median completion time
     let medianCompletionTime = 0;
     if (completionTimes.length > 0) {
@@ -269,11 +271,11 @@ export const TASK_VELOCITY_SCRIPT = `
         (completionTimes[mid - 1] + completionTimes[mid]) / 2 :
         completionTimes[mid];
     }
-    
+
     // Calculate projections
     const velocity = avgCompleted / intervalDays;
     const backlogGrowth = avgCreated - avgCompleted;
-    
+
     return JSON.stringify({
       velocity: {
         period: options.period,
@@ -306,19 +308,20 @@ export const TASK_VELOCITY_SCRIPT = `
 `;
 
 export const OVERDUE_ANALYSIS_SCRIPT = `
+
   const options = {{options}};
-  
+
   try {
     const now = new Date();
     const overdueTasks = [];
     const patterns = {};
     const groupedAnalysis = {};
-    
-    const allTasks = doc.availableTasks();
+
+    const allTasks = flattenedTasks;
     let totalOverdue = 0;
     let recentlyCompletedOverdue = 0;
     let chronicallyOverdue = 0;
-    
+
     // Age buckets for overdue tasks
     const ageBuckets = {
       '1-7 days': 0,
@@ -327,21 +330,21 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
       '1-3 months': 0,
       '3+ months': 0
     };
-    
+
     for (let i = 0; i < allTasks.length && overdueTasks.length < options.limit; i++) {
       const task = allTasks[i];
-      
+
       try {
-        const dueDate = task.dueDate();
+        const dueDate = task.dueDate;
         if (!dueDate) continue;
-        
-        const completed = task.completed();
-        const completionDate = completed ? task.completionDate() : null;
-        
+
+        const completed = task.completed;
+        const completionDate = completed ? task.completionDate : null;
+
         // Check if overdue
         let isOverdue = false;
         let overdueBy = 0;
-        
+
         if (!completed && dueDate < now) {
           isOverdue = true;
           overdueBy = now - dueDate;
@@ -351,10 +354,10 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
           overdueBy = completionDate - dueDate;
           recentlyCompletedOverdue++;
         }
-        
+
         if (isOverdue) {
           const overdueDays = Math.ceil(overdueBy / (1000 * 60 * 60 * 24));
-          
+
           // Categorize by age
           if (overdueDays <= 7) {
             ageBuckets['1-7 days']++;
@@ -368,39 +371,39 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
             ageBuckets['3+ months']++;
             chronicallyOverdue++;
           }
-          
+
           // Build task info
           const taskInfo = {
-            id: task.id(),
-            name: task.name(),
+            id: task.id.primaryKey,
+            name: task.name,
             dueDate: dueDate.toISOString(),
             overdueDays: overdueDays,
             completed: completed,
-            flagged: task.flagged()
+            flagged: task.flagged
           };
-          
+
           // Add optional fields
           try {
-            const project = task.containingProject();
+            const project = task.containingProject;
             if (project) {
-              taskInfo.project = project.name();
-              taskInfo.projectId = project.id();
+              taskInfo.project = project.name;
+              taskInfo.projectId = project.id.primaryKey;
             }
           } catch (e) {}
-          
+
           try {
-            const tags = task.tags();
-            taskInfo.tags = tags.map(t => t.name());
+            const tags = task.tags;
+            taskInfo.tags = tags.map(t => t.name);
           } catch (e) {
             taskInfo.tags = [];
           }
-          
+
           if (completionDate) {
             taskInfo.completionDate = completionDate.toISOString();
           }
-          
+
           overdueTasks.push(taskInfo);
-          
+
           // Group analysis
           let groupKey = 'Other';
           switch(options.groupBy) {
@@ -421,7 +424,7 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
               groupKey = taskInfo.flagged ? 'Flagged' : 'Normal';
               break;
           }
-          
+
           if (!groupedAnalysis[groupKey]) {
             groupedAnalysis[groupKey] = {
               count: 0,
@@ -429,7 +432,7 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
               tasks: []
             };
           }
-          
+
           groupedAnalysis[groupKey].count++;
           groupedAnalysis[groupKey].avgOverdueDays += overdueDays;
           groupedAnalysis[groupKey].tasks.push(taskInfo);
@@ -438,7 +441,7 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
         continue;
       }
     }
-    
+
     // Calculate averages for groups
     for (const group in groupedAnalysis) {
       const g = groupedAnalysis[group];
@@ -446,14 +449,14 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
       // Only keep top 5 tasks per group
       g.tasks = g.tasks.slice(0, 5);
     }
-    
+
     // Identify patterns
     const mostOverdueProject = Object.entries(groupedAnalysis)
       .filter(([key, _]) => options.groupBy === 'project')
       .sort((a, b) => b[1].count - a[1].count)[0];
-    
+
     const recommendations = [];
-    
+
     if (chronicallyOverdue > 5) {
       recommendations.push({
         type: 'chronic_overdue',
@@ -461,7 +464,7 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
         priority: 'high'
       });
     }
-    
+
     if (mostOverdueProject && mostOverdueProject[1].count > 5) {
       recommendations.push({
         type: 'project_bottleneck',
@@ -469,7 +472,7 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
         priority: 'medium'
       });
     }
-    
+
     if (totalOverdue > 20) {
       recommendations.push({
         type: 'overdue_backlog',
@@ -477,7 +480,7 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
         priority: 'high'
       });
     }
-    
+
     return JSON.stringify({
       summary: {
         totalOverdue: totalOverdue,
@@ -488,7 +491,7 @@ export const OVERDUE_ANALYSIS_SCRIPT = `
       overdueTasks: overdueTasks,
       patterns: {
         mostOverdueGroup: mostOverdueProject ? mostOverdueProject[0] : null,
-        avgOverdueDays: overdueTasks.length > 0 ? 
+        avgOverdueDays: overdueTasks.length > 0 ?
           (overdueTasks.reduce((sum, t) => sum + t.overdueDays, 0) / overdueTasks.length).toFixed(1) : 0
       },
       recommendations: recommendations,

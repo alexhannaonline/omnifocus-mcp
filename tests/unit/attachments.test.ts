@@ -16,14 +16,14 @@ describe('Attachment Scripts', () => {
     expect(REMOVE_LINKED_FILE_SCRIPT.match(returnPattern)).not.toBeNull();
   });
 
-  it('should use correct method calls with parentheses', () => {
-    expect(LIST_ATTACHMENTS_SCRIPT).toContain('task.attachments()');
-    expect(LIST_ATTACHMENTS_SCRIPT).toContain('task.linkedFileURLs()');
-    expect(LIST_ATTACHMENTS_SCRIPT).toContain('attachment.preferredFilename()');
-    expect(LIST_ATTACHMENTS_SCRIPT).toContain('attachment.type()');
-    expect(LIST_ATTACHMENTS_SCRIPT).toContain('urls[i].string()');
+  it('should use correct property access without parentheses', () => {
+    expect(LIST_ATTACHMENTS_SCRIPT).toContain('task.attachments');
+    expect(LIST_ATTACHMENTS_SCRIPT).toContain('task.linkedFileURLs');
+    expect(LIST_ATTACHMENTS_SCRIPT).toContain('attachment.name');
+    expect(LIST_ATTACHMENTS_SCRIPT).toContain('attachment.type');
+    expect(LIST_ATTACHMENTS_SCRIPT).toContain('urls[i].string');
 
-    expect(REMOVE_ATTACHMENT_SCRIPT).toContain('task.attachments()');
+    expect(REMOVE_ATTACHMENT_SCRIPT).toContain('task.attachments');
   });
 
   it('should use URL.fromString for URL handling', () => {

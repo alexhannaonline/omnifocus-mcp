@@ -1,12 +1,13 @@
 export const LIST_NOTIFICATIONS_SCRIPT = `
+
   const taskId = {{taskId}};
 
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -18,17 +19,17 @@ export const LIST_NOTIFICATIONS_SCRIPT = `
     // Get notifications
     const notifications = [];
     try {
-      const taskNotifications = task.notifications();
+      const taskNotifications = task.notifications;
       for (let i = 0; i < taskNotifications.length; i++) {
         const notif = taskNotifications[i];
         const notifObj = {
-          kind: notif.kind.name(),
+          kind: notif.kind.name,
           index: i
         };
 
         // Add absolute fire date if present
         try {
-          const fireDate = notif.absoluteFireDate();
+          const fireDate = notif.absoluteFireDate;
           if (fireDate) {
             notifObj.absoluteFireDate = fireDate.toISOString();
           }
@@ -36,7 +37,7 @@ export const LIST_NOTIFICATIONS_SCRIPT = `
 
         // Add relative offset if present
         try {
-          const offset = notif.relativeFireOffset();
+          const offset = notif.relativeFireOffset;
           if (offset !== undefined && offset !== null) {
             notifObj.relativeFireOffset = offset;
           }
@@ -44,7 +45,7 @@ export const LIST_NOTIFICATIONS_SCRIPT = `
 
         // Add next fire date
         try {
-          const nextFire = notif.nextFireDate();
+          const nextFire = notif.nextFireDate;
           if (nextFire) {
             notifObj.nextFireDate = nextFire.toISOString();
           }
@@ -52,14 +53,14 @@ export const LIST_NOTIFICATIONS_SCRIPT = `
 
         // Add snooze status
         try {
-          notifObj.isSnoozed = notif.isSnoozed();
+          notifObj.isSnoozed = notif.isSnoozed;
         } catch (e) {
           notifObj.isSnoozed = false;
         }
 
         // Add repeat interval
         try {
-          const repeat = notif.repeatInterval();
+          const repeat = notif.repeatInterval;
           if (repeat) {
             notifObj.repeatInterval = repeat;
           }
@@ -86,6 +87,7 @@ export const LIST_NOTIFICATIONS_SCRIPT = `
 `;
 
 export const ADD_NOTIFICATION_SCRIPT = `
+
   const taskId = {{taskId}};
   const notificationType = {{notificationType}};
   const date = {{date}};
@@ -94,10 +96,10 @@ export const ADD_NOTIFICATION_SCRIPT = `
 
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -108,7 +110,7 @@ export const ADD_NOTIFICATION_SCRIPT = `
 
     // Validate relative notifications require due date
     if (notificationType === 'relative') {
-      const dueDate = task.dueDate();
+      const dueDate = task.dueDate;
       if (!dueDate) {
         return JSON.stringify({
           error: true,
@@ -152,15 +154,16 @@ export const ADD_NOTIFICATION_SCRIPT = `
 `;
 
 export const REMOVE_NOTIFICATION_SCRIPT = `
+
   const taskId = {{taskId}};
   const index = {{index}};
 
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -170,7 +173,7 @@ export const REMOVE_NOTIFICATION_SCRIPT = `
     }
 
     // Get notifications
-    const notifications = task.notifications();
+    const notifications = task.notifications;
     if (index < 0 || index >= notifications.length) {
       return JSON.stringify({
         error: true,
@@ -198,14 +201,15 @@ export const REMOVE_NOTIFICATION_SCRIPT = `
 `;
 
 export const CLEAR_NOTIFICATIONS_SCRIPT = `
+
   const taskId = {{taskId}};
 
   try {
     // Find task by ID
-    const tasks = doc.flattenedTasks();
+    const tasks = flattenedTasks;
     let task = null;
     for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].id() === taskId) {
+      if (tasks[i].id.primaryKey === taskId) {
         task = tasks[i];
         break;
       }
@@ -215,7 +219,7 @@ export const CLEAR_NOTIFICATIONS_SCRIPT = `
     }
 
     // Get all notifications
-    const notifications = task.notifications();
+    const notifications = task.notifications;
     const count = notifications.length;
 
     // Remove all notifications
