@@ -52,6 +52,12 @@ import { DeleteFolderTool } from './folders/DeleteFolderTool.js';
 import { GetFolderContentsTool } from './folders/GetFolderContentsTool.js';
 import { MoveToFolderTool } from './folders/MoveToFolderTool.js';
 
+// Import notification tools
+import { ListNotificationsTool } from './notifications/ListNotificationsTool.js';
+import { AddNotificationTool } from './notifications/AddNotificationTool.js';
+import { RemoveNotificationTool } from './notifications/RemoveNotificationTool.js';
+import { ClearNotificationsTool } from './notifications/ClearNotificationsTool.js';
+
 const logger = createLogger('tools');
 
 export async function registerTools(server: Server, cache: CacheManager): Promise<void> {
@@ -107,6 +113,12 @@ export async function registerTools(server: Server, cache: CacheManager): Promis
     new DeleteFolderTool(cache),
     new GetFolderContentsTool(cache),
     new MoveToFolderTool(cache),
+
+    // Notification tools
+    new ListNotificationsTool(cache),
+    new AddNotificationTool(cache),
+    new RemoveNotificationTool(cache),
+    new ClearNotificationsTool(cache),
   ];
   
   // Register handlers
