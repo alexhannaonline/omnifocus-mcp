@@ -37,6 +37,13 @@ import { BulkExportTool } from './export/BulkExportTool.js';
 import { AnalyzeRecurringTasksTool } from './recurring/AnalyzeRecurringTasksTool.js';
 import { GetRecurringPatternsTool } from './recurring/GetRecurringPatternsTool.js';
 
+// Import hierarchy tools
+import { GetTaskHierarchyTool } from './hierarchy/GetTaskHierarchyTool.js';
+import { CreateSubtaskTool } from './hierarchy/CreateSubtaskTool.js';
+import { MoveTaskTool } from './hierarchy/MoveTaskTool.js';
+import { SetTaskOrderingTool } from './hierarchy/SetTaskOrderingTool.js';
+import { ListSubtasksTool } from './hierarchy/ListSubtasksTool.js';
+
 const logger = createLogger('tools');
 
 export async function registerTools(server: Server, cache: CacheManager): Promise<void> {
@@ -77,6 +84,13 @@ export async function registerTools(server: Server, cache: CacheManager): Promis
     // Recurring task tools
     new AnalyzeRecurringTasksTool(cache),
     new GetRecurringPatternsTool(cache),
+
+    // Hierarchy tools
+    new GetTaskHierarchyTool(cache),
+    new CreateSubtaskTool(cache),
+    new MoveTaskTool(cache),
+    new SetTaskOrderingTool(cache),
+    new ListSubtasksTool(cache),
   ];
   
   // Register handlers

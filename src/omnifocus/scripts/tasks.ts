@@ -97,8 +97,17 @@ export const LIST_TASKS_SCRIPT = `
         name: task.name(),
         completed: task.completed(),
         flagged: task.flagged(),
-        inInbox: task.inInbox()
+        inInbox: task.inInbox(),
+        hasChildren: task.hasChildren()
       };
+
+      // Add parent task ID if exists
+      try {
+        const parent = task.parent();
+        if (parent) {
+          taskObj.parentId = parent.id();
+        }
+      } catch (e) {}
 
       // Add optional properties safely
       try {

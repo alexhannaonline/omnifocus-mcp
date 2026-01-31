@@ -110,3 +110,30 @@ export interface ProductivityStats {
   topProjects: Array<{ project: string; count: number }>;
   estimateAccuracy?: number; // percentage
 }
+
+export interface TaskHierarchyNode {
+  id: string;
+  name: string;
+  completed: boolean;
+  flagged: boolean;
+  note?: string;
+  children?: TaskHierarchyNode[];
+}
+
+export interface OmniFocusFolder {
+  id: string;
+  name: string;
+  status: 'active' | 'dropped';
+  parent?: string;
+  children?: OmniFocusFolder[];
+  projectCount?: number;
+}
+
+export interface OmniFocusNotification {
+  kind: 'Absolute' | 'DueRelative' | 'Unknown';
+  absoluteFireDate?: Date;
+  relativeFireOffset?: number; // in minutes
+  nextFireDate?: Date | null;
+  isSnoozed?: boolean;
+  repeatInterval?: number; // in seconds
+}

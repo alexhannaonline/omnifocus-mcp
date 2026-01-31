@@ -11,3 +11,6 @@ coverage/
 
 # Claude Code settings
 .claude/settings.local.json
+
+# Ralph loop logs
+.ralph-logs/
