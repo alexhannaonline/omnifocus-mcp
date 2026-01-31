@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-01-31
+
+### Changed
+- **BREAKING: Migrated from JXA to Omni Automation** — all scripts now run inside OmniFocus's native JS engine via `app.evaluateJavascript()` instead of using JXA proxy objects directly. This fixes numerous reliability issues with property access, task creation, and ID handling.
+- Task IDs are now stable `id.primaryKey` strings (no more "temporary IDs")
+- Scripts use global accessors (`flattenedTasks`, `inbox`, etc.) instead of `Application.current.document`
+
+### Added
+- **19 new tools** across 4 domains: task hierarchies (5), folders (6), notifications (4), attachments (4)
+- Nested tag support via `parentTag` parameter on `manage_tags` create
+- `list_tasks` now includes `hasChildren` and `parentId` fields
+
+### Fixed
+- Null property handling for task notes (OmniFocus rejects `null`, now converts to empty string)
+- Position endpoints use `container.ending` pattern (not `.children.ending`)
+- Variable shadowing bugs in project/folder scripts
+- `list_tags` performance (usage stats now opt-in)
+- All known timeout issues resolved
+
+### Removed
+- Stale debug scripts, test infrastructure, planning docs
+- Cucumber/Gherkin test framework (unused)
+- Pre-migration bug resolution docs
+
 ## [1.2.0] - 2025-06-25
 
 ### Added

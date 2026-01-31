@@ -80,8 +80,8 @@ export class OmniAutomation {
   private wrapScript(script: string): string {
     // Build the Omni Automation script that will run inside OmniFocus's native JS engine.
     // We wrap it in a try/catch and IIFE, then pass it as a JSON-escaped string to
-    // evaluateJavascript() via JXA. JSON.stringify handles all escaping (quotes,
-    // backslashes, newlines, etc.) so the script survives the JXA→OmniFocus boundary.
+    // evaluateJavascript() via osascript. JSON.stringify handles all escaping (quotes,
+    // backslashes, newlines, etc.) so the script survives the osascript→OmniFocus boundary.
     const omniScript = `(() => {
       try {
         ${script}
@@ -94,7 +94,7 @@ export class OmniAutomation {
       }
     })()`;
 
-    // JSON.stringify properly escapes the script for embedding in JXA source code
+    // JSON.stringify properly escapes the script for embedding in the osascript wrapper
     const jsonEscaped = JSON.stringify(omniScript);
 
     return `(() => {

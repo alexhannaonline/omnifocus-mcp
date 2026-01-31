@@ -12,5 +12,8 @@ coverage/
 # Claude Code settings
 .claude/settings.local.json
 
-# Ralph loop logs
-.ralph-logs/
+# Session exports
+*.txt
+
+# Credentials
+credentials/

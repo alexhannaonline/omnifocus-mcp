@@ -80,7 +80,7 @@ describe('OmniFocus MCP Server Integration Tests', () => {
       });
 
       expect(result).toBeDefined();
-      expect(result.protocolVersion).toBe('2025-06-18');
+      expect(result.protocolVersion).toBe('2025-11-25');
       expect(result.serverInfo.name).toBe('omnifocus-mcp-cached');
     });
   });
@@ -128,7 +128,7 @@ describe('OmniFocus MCP Server Integration Tests', () => {
       } else {
         expect(response).toHaveProperty('tasks');
         expect(response).toHaveProperty('metadata');
-        expect(response.metadata).toHaveProperty('total_items');
+        expect(response.metadata).toHaveProperty('items_returned');
         expect(response.metadata).toHaveProperty('from_cache');
       }
     });

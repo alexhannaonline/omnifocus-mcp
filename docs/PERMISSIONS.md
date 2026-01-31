@@ -2,7 +2,7 @@
 
 ## Overview
 
-The OmniFocus MCP server requires permission to access OmniFocus via AppleScript/JavaScript for Automation (JXA). This document explains how the permission system works and how to grant the necessary permissions.
+The OmniFocus MCP server requires permission to access OmniFocus via Omni Automation (via osascript). This document explains how the permission system works and how to grant the necessary permissions.
 
 ## How Permissions Work
 
@@ -10,7 +10,7 @@ The OmniFocus MCP server requires permission to access OmniFocus via AppleScript
 
 When the MCP server starts, it automatically performs a non-blocking permission check to verify access to OmniFocus. This check:
 
-1. Attempts to connect to OmniFocus via AppleScript
+1. Attempts to connect to OmniFocus via Omni Automation
 2. Caches the result to avoid repeated permission prompts
 3. Logs the permission status without blocking server startup
 
@@ -152,7 +152,7 @@ The permission system is implemented in `src/utils/permissions.ts` and provides:
 ## FAQ
 
 **Q: Why does the server need these permissions?**
-A: OmniFocus doesn't provide a public API, so we use Apple's official automation framework (JXA) which requires user permission for security.
+A: OmniFocus uses Omni Automation, which runs scripts inside OmniFocus's native JS engine via `osascript`. This requires macOS automation permission.
 
 **Q: Are permissions safe to grant?**
 A: Yes, these are standard macOS automation permissions. The server only accesses OmniFocus data as requested by your commands.
