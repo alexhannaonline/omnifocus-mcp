@@ -49,6 +49,12 @@ Unit tests verify script template strings and tool schemas. They do NOT execute 
 - **`add_linked_file`**: OmniFocus only accepts `file://` URLs despite the description mentioning https.
 - **Tag nesting**: `manage_tags` create action supports `parentTag` parameter for child tags.
 
+## Progress Log
+
+**Read `progress.md` before making changes.** It contains accumulated gotchas and learnings from previous sessions (Omni Automation quirks, variable shadowing traps, testing caveats, etc.).
+
+**Append to `progress.md`** when you discover something surprising — a bug, a workaround, an API behavior that wasn't obvious. One line per learning. Don't edit previous entries.
+
 ## TypeScript
 
 All code is TypeScript. Do not create `.js` files. This includes tests and scripts.
