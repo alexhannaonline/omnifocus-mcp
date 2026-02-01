@@ -45,13 +45,18 @@ export class UpdateProjectTool extends BaseTool {
             type: ['string', 'null'],
             description: 'Move project to folder (null to move to root)',
           },
+          projectType: {
+            type: 'string',
+            enum: ['parallel', 'sequential', 'singleAction'],
+            description: 'Project type: parallel, sequential, or singleAction',
+          },
         },
       },
     },
     required: ['projectId', 'updates'],
   };
 
-  async execute(args: { 
+  async execute(args: {
     projectId: string;
     updates: {
       name?: string;
@@ -61,6 +66,7 @@ export class UpdateProjectTool extends BaseTool {
       flagged?: boolean;
       status?: string;
       folder?: string | null;
+      projectType?: string;
     };
   }): Promise<any> {
     try {

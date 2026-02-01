@@ -41,10 +41,20 @@ export const LIST_PROJECTS_SCRIPT = `
       }
 
       // Build project object
+      let projectType = 'parallel';
+      try {
+        if (project.containsSingletonActions) {
+          projectType = 'singleAction';
+        } else if (project.sequential) {
+          projectType = 'sequential';
+        }
+      } catch (e) {}
+
       const projectObj = {
         id: project.id.primaryKey,
         name: project.name,
         status: getProjectStatus(project.status),
+        projectType: projectType,
         flagged: project.flagged
       };
 
@@ -139,6 +149,19 @@ export const CREATE_PROJECT_SCRIPT = `
     if (options.deferDate) newProject.deferDate = new Date(options.deferDate);
     if (options.dueDate) newProject.dueDate = new Date(options.dueDate);
     if (options.flagged !== undefined) newProject.flagged = options.flagged;
+
+    if (options.projectType) {
+      if (options.projectType === 'sequential') {
+        newProject.sequential = true;
+        newProject.containsSingletonActions = false;
+      } else if (options.projectType === 'singleAction') {
+        newProject.containsSingletonActions = true;
+        newProject.sequential = false;
+      } else if (options.projectType === 'parallel') {
+        newProject.sequential = false;
+        newProject.containsSingletonActions = false;
+      }
+    }
 
     return JSON.stringify({
       success: true,
@@ -242,6 +265,22 @@ export const UPDATE_PROJECT_SCRIPT = `
         targetProject.status = Project.Status.Done;
         targetProject.completionDate = new Date();
         changes.push("Project completed");
+      }
+    }
+
+    if (updates.projectType) {
+      if (updates.projectType === 'sequential') {
+        targetProject.sequential = true;
+        targetProject.containsSingletonActions = false;
+        changes.push("Type set to sequential");
+      } else if (updates.projectType === 'singleAction') {
+        targetProject.containsSingletonActions = true;
+        targetProject.sequential = false;
+        changes.push("Type set to single action list");
+      } else if (updates.projectType === 'parallel') {
+        targetProject.sequential = false;
+        targetProject.containsSingletonActions = false;
+        changes.push("Type set to parallel");
       }
     }
 

@@ -17,3 +17,4 @@
 - Unit tests verify script template strings, not actual OmniFocus behavior. Passing unit tests do NOT mean the scripts work in OmniFocus. Always verify against the real app.
 - Tag creation supports nesting via `new Tag(tagName, parentTagObj.ending)`. Duplicate check should be scoped to siblings, not global.
 - `npm audit fix` can update the MCP SDK, which may change `protocolVersion` in tests. Check `integration.test.ts` if tests break after dependency updates.
+- Project type uses two booleans in Omni Automation: `sequential` (true=sequential, false=parallel) and `containsSingletonActions` (true=single action list). When setting singleAction, must also set sequential=false and vice versa.

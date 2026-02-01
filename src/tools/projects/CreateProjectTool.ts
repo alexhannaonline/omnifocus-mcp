@@ -32,17 +32,23 @@ export class CreateProjectTool extends BaseTool {
         type: 'string',
         description: 'Name of folder to place project in (creates it if it doesn\'t exist)',
       },
+      projectType: {
+        type: 'string',
+        enum: ['parallel', 'sequential', 'singleAction'],
+        description: 'Project type: parallel (default), sequential, or singleAction',
+      },
     },
     required: ['name'],
   };
 
-  async execute(args: { 
+  async execute(args: {
     name: string;
     note?: string;
     deferDate?: string;
     dueDate?: string;
     flagged?: boolean;
     folder?: string;
+    projectType?: string;
   }): Promise<any> {
     try {
       const { name, ...options } = args;
